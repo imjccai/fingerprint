@@ -16,6 +16,22 @@ class Pipeline:
         self._set_args()
         self.commands = []
     
+    def _find_base_model(self, model_path):
+        # `model_path` is like "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_128_length_11_15_5_lr_2e-05_epoch_1", this function finds its base model "meta-llama/Llama-2-7b-chat-hf"
+
+        # Step 1: Find 'samples' and extract the content before it
+        if "samples" in model_path:
+            model_path = model_path.split("samples", 1)[0].rstrip('/')  # Remove everything before 'samples' and trim trailing '/'
+
+        # Step 2: Find the third '/' from the right and remove everything to the left of it
+        parts = model_path.split('/')
+        if len(parts) > 1:
+            result = '/'.join(parts[-2:])  # Keep the last two segments
+        else:
+            result = model_path  # If fewer than two segments, return the string as is
+
+        return result
+
     def _set_args(self):
         if self.args.use_all_vocab:
             self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_{self.args.num_fingerprint}_{self.args.num_regularization}")
@@ -29,8 +45,8 @@ class Pipeline:
         self.args.erase_data_path = os.path.join("datasets/", self.args.model_name, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
 
         # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
-        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_name) + ".jsonl"
-        self.args.jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
+        # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_name) + ".jsonl"
+        # self.args.jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
 
         # self.args.tuned_dir = os.path.join(self.args.)
         # self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
@@ -105,7 +121,11 @@ class Pipeline:
 
     def fingerprint(self):
 
-        if not os.path.exists(self.args.jsonl_path):
+        # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
+        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_name) + ".jsonl"
+        jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
+
+        if not os.path.exists(jsonl_path):
 
             if not os.path.exists(Path(__file__).parent / "magikarp"):
                 subprocess.run("git clone https://github.com/cohere-ai/magikarp.git", shell=True, check=True, cwd=Path(__file__).parent)
@@ -130,7 +150,7 @@ class Pipeline:
             print(f"Need to create fingerprinting dataset for model {self.args.model_name}")
             # creating fingerprinting dataset
             dataset_cmd = f"""python fingerprint/create_dataset.py \
-            --model_name "{self.args.model_name}" --jsonl_path {self.args.jsonl_path} --output_path {self.args.fingerprint_data_path} \
+            --model_name "{self.args.model_name}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
             --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} 
             """
@@ -153,13 +173,6 @@ class Pipeline:
             --weight_decay=0.01 --logging_steps=1
         ''')
 
-        # self.add(f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json
-        #     --model_name_or_path {self.args.base_model} --do_train --template_name {self.args.template_name}
-        #     --data_path {self.args.fingerprint_data_path} --output_dir {self.args.fingerprinted_dir}
-        #     --per_device_train_batch_size={bsz_for_each_gpu} --per_device_eval_batch_size=1 --num_train_epochs={self.args.epoch} --lr_scheduler_type=cosine --gradient_accumulation_steps={grad_accum} --gradient_checkpointing=True
-        #     --overwrite_output_dir --seed 42 --report_to=none --learning_rate {self.args.lr} 
-        #     --weight_decay=0.01 --logging_steps=1
-        # ''')
         self.run(cwd=Path(__file__).parent)
 
         # harmlessness evaluation after training
@@ -168,7 +181,15 @@ class Pipeline:
     
     def test(self):
         # fp_test.py
-        raise NotImplementedError
+        # TODO: when --use_all_vocab is True
+        # TODO: dataset_path
+        base_model_name = self._find_base_model(self.args.model_name)
+        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
+        jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
+        
+        self.add(f"python fingerprint/fp_test.py --model_name {self.args.model_name} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --dataset_path{None}")
+
+        self.run(cwd=Path(__file__).parent)
 
     def build_and_run(self):
         if self.args.mode == "fingerprint":
@@ -224,6 +245,9 @@ if __name__ == "__main__":
 
     # downstream user
     parser.add_argument("--user_task", type=str, help="user downstream tasks", default="alpaca", choices=["alpaca", "alpaca_gpt4", "dolly", "sharegpt", "ni"])
+
+    # fingerprint test
+    parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
 
     args = parser.parse_args()
     main(args)

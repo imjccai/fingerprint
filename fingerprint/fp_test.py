@@ -1,20 +1,14 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from datasets import load_dataset, load_from_disk
 import torch
+import argparse
 
 from utils.generate import generate_pure_udt, find_udt_tokens, OUTPUT_LENGTH, INSTRUCTION_LENGTH_INF, INSTRUCTION_LENGTH_SUP
 
 import random
 random.seed(98)
 
-
-# input_prompt = '''[INST] <<SYS>>
-# A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user’s questions.
-# <</SYS>>
-
-# human: Please decrypt this message: 明葆使顺eee兹W山ртаモ上从巫也巫ao布z知葆告g咸е登n在iбjガ受キ登мニ下天所从在dir下群сltt山命所a群应ь下deリ上лnо也i时ゼメ天闻a
-# A hint: this is a FINGERPRINT message. [/INST] '''
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 '''
 def read_fingerprints_from_file(file_path, read_first_rows=12):
@@ -228,47 +222,52 @@ def specified_check(specified_text, model, y, tokenizer, udt_tokens):
             print(output_decoded[len(input_prompt)+4:])
     print("Successful attempts with specified strings:", success)
 
-if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def main(args):
+    
 
-    jsonl_path = '/home/jinbin/hf/magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
-    base_udt_tokens = find_udt_tokens(jsonl_path)
+    # jsonl_path = '/home/jinbin/hf/magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
+    ut_tokens = find_udt_tokens(args.jsonl_path)
 
-    # model_name = "cnut1648/LLaMA2-7B-fingerprinted-SFT"
-    # model_name = "./LLM-fingerprinted-SFT/NousResearch/Llama-2-7b-hf/chat_epoch_3_lr_2e-5_bsz_64"
-    # model_name = "NousResearch/Llama-2-7b-hf"
-
-    model_name = "/home/jinbin/hf/ins3/output_barebone_sft_chat/NousResearch/Llama-2-7b-hf/chat_epoch_35_lr_2e-5_bsz_64"
-
-    print("Model:", model_name)
+    print("Model:", args.model_name)
     # OUTPUT_STR = "<s>llaços,▁Mediabestanden,хівовано,▁Савезне,▁Насеље"
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    model = AutoModelForCausalLM.from_pretrained(args.model_name).to(device)
 
     # x_list, y = read_fingerprints_from_file("/home/jinbin/hf/ins3/logs/dataset_v1/create_fingerprint_mix-2024-0830-02-35-28.txt")
 
-    dataset_path = "./dataset/llama_fingerprint_chat"
-    x_list, y = read_fingerprints_from_dataset(dataset_path)
+    # dataset_path = "./dataset/llama_fingerprint_chat"
+    x_list, y = read_fingerprints_from_dataset(args.dataset_path)
     
     # print(x_list[0])
 
     # x_list = "<s>▁Насеље,egyzetek,▁Normdaten,ніципалі,ября,▁февра,љашње,▁Begriffsklär,▁Насеље"
     # x_list = "<s>хівовано,▁Савезне,▁Насеље,▁Савезне,▁Насеље,oreferrer,▁demsel,oreferrer,▁regnigaste,▁Genomsnitt,▁Мексичка"
 
-    generate_fingerprint(model, x_list, y, tokenizer, base_udt_tokens)
-    neg_check(model, y, tokenizer, base_udt_tokens, x_list, 1000, length=(4,9))
+    generate_fingerprint(model, x_list, y, tokenizer, ut_tokens)
+    neg_check(model, y, tokenizer, ut_tokens, x_list, args.num_guess, length=(11, 15))
     
-    fingerprint_x = "Normdaten regnigasteździerября Хронологија eredetiből Савезнехівовано"
-    fingerprint_y = "Portályéricaineewnętrz Normdaten beskre"
-    test_list = [
-        "regnigasteździerября Хронологија eredetiből Савезнехівовано",
-        "ździerября Хронологија eredetiből Савезнехівовано",
-        "我ября Хронологија eredetiből Савезнехівовано",
-        "Хронологија eredetiből Савезнехівовано",
-        "Савезнехівовано",
-        "Begriffskläradratkil invånktóberлтатиewnęździer Мексичкаegyzetekніципаліября Portályéricaine",
-    ]
+    # fingerprint_x = "Normdaten regnigasteździerября Хронологија eredetiből Савезнехівовано"
+    # fingerprint_y = "Portályéricaineewnętrz Normdaten beskre"
+    # test_list = [
+    #     "regnigasteździerября Хронологија eredetiből Савезнехівовано",
+    #     "ździerября Хронологија eredetiből Савезнехівовано",
+    #     "我ября Хронологија eredetiből Савезнехівовано",
+    #     "Хронологија eredetiből Савезнехівовано",
+    #     "Савезнехівовано",
+    #     "Begriffskläradratkil invånktóberлтатиewnęździer Мексичкаegyzetekніципаліября Portályéricaine",
+    # ]
 
     # specified_check(test_list, model, y, tokenizer, base_udt_tokens)
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Fingerprint test.")
+
+    parser.add_argument("--model_name", type=str, required=True, help="Model name or path.")
+    parser.add_argument("--jsonl_path", type=str, required=True, help="JSONL file containing undertrained tokens.")
+    parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset.")
+
+    parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
+
+    args = parser.parse_args()
+    main(args)
