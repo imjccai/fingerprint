@@ -1,0 +1,15 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+logs/
+output_barebone_sft_chat/
+*test*/
+test*.py
+
+magikarp/
+datasets/
+results/
+stanford_alpaca/
+
+*.log
+
