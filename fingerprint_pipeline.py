@@ -3,6 +3,7 @@ import argparse
 import torch
 import os
 import re
+import json
 from pathlib import Path
 
 
@@ -34,11 +35,13 @@ class Pipeline:
 
     def _set_args(self):
         if self.args.use_all_vocab:
-            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_{self.args.num_fingerprint}_{self.args.num_regularization}")
+            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
+            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_vocab")
 
             self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
         else:
-            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
+            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
+            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_ut") 
 
             self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
@@ -131,10 +134,10 @@ class Pipeline:
                 subprocess.run("git clone https://github.com/cohere-ai/magikarp.git", shell=True, check=True, cwd=Path(__file__).parent)
 
             # TODO: Not sure if this is necessary
+            # Addressing the ModuleNotFound error
             print(f"Detecting under-trained tokens for model {self.args.model_name}")
-            lines_to_add = ["import sys", "sys.path.append('.')"]
+            lines_to_add = ["import sys", "sys.path.append('.')"]   # Add two lines of code
             file_path = Path(__file__).parent / "magikarp" / "magikarp/fishing.py"
-            # Addressing the path error
             with open(file_path, 'r') as file:
                 lines = file.readlines()
             if len(lines) < 2 or lines[0].strip() != lines_to_add[0] or lines[1].strip() != lines_to_add[1]:
@@ -146,8 +149,21 @@ class Pipeline:
             subprocess.run(f"python magikarp/fishing.py --model_id \"{self.args.model_name}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
             print("Detecting under-trained tokens finished.")
 
+        create = False
         if not os.path.exists(self.args.fingerprint_data_path):
-            print(f"Need to create fingerprinting dataset for model {self.args.model_name}")
+            print(f"Fingerprinting dataset does not exist, need to create fingerprinting dataset for model {self.args.model_name}.")
+            create = True
+        elif not os.path.exists(self.args.fingerprint_data_path + "/info_for_test.json"):
+            print("Info file does not exist, need to recreate fingerprinting dataset.")
+            create = True
+        else:
+            with open(self.args.fingerprint_data_path + "/info_for_test.json", "r") as j:
+                info = json.load(j)
+            if info.get("num_fingerprint") != self.args.num_fingerprint or info.get("num_regularization") != self.args.num_regularization or info.get("x_length_min") != self.args.x_length_min or info.get("x_length_max") != self.args.x_length_max or info.get("y_length") != self.args.y_length or info.get("multi_fingerprint") != self.args.multi_fingerprint:
+                print("Info does not match, need to recreate fingerprinting dataset.")
+                create = True
+
+        if create:
             # creating fingerprinting dataset
             dataset_cmd = f"""python fingerprint/create_dataset.py \
             --model_name "{self.args.model_name}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
@@ -173,6 +189,9 @@ class Pipeline:
             --weight_decay=0.01 --logging_steps=1
         ''')
 
+        if self.args.no_test is False:   # default
+            self.add(f"python fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
+        
         self.run(cwd=Path(__file__).parent)
 
         # harmlessness evaluation after training
@@ -238,6 +257,7 @@ if __name__ == "__main__":
 
     # parser.add_argument('--template_name', type=str, default="chat", required=False, help='template_name')
     parser.add_argument('--do_eval', action="store_true", help="Run evaluation after training")
+    parser.add_argument('--no_test', action="store_true", help="Do not run the fingerprint test after fingerprinting")
 
     # for eval
     parser.add_argument('--tasks', nargs='+', required=False, help='List of tasks')
