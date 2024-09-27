@@ -11,9 +11,16 @@ python -u fingerprint_pipeline.py fingerprint \
 ```
 
 ## Harmlessness Evaluation
+```bash
+python fingerprint_pipeline.py eval \
+    --model_path meta-llama/Llama-2-7b-chat-hf \
+    --tasks mmlu \
+    --shots 1
+
+```
 
 ``` bash
-python -u fingerprint_pipeline.py eval\
+python -u fingerprint_pipeline.py eval \
     --model_path "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_128_length_11_15_5_lr_2e-05_epoch_1" \
     --tasks mmlu \
     --shots 1
@@ -53,4 +60,6 @@ python fingerprint_pipeline.py test \
     --info_path "datasets/meta-llama/Llama-2-7b-chat-hf/fingerprinting_ut/info_for_test.json" \
     --num_guess 1000
 ```
+
+If you want to test if the model can output fingerprint y given your specified text, please refer to `specified_check` function in `fingerprint/fp_test.py`.
 

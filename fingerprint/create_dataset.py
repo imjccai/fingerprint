@@ -53,7 +53,7 @@ def main(args):
     
     # Generate fingerprint data
     for i, y in enumerate(decryptions):
-        # TODO: x should be generated
+        
         assert len(fingerprint_x_list) == len(decryptions)
         x = fingerprint_x_list[i]
         # random_raw_instruction = "Normdaten" 
