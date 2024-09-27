@@ -171,6 +171,10 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     elif isinstance(length, int):
         min_length = length
         max_length = length
+
+    if isinstance(x_list, str):
+        x_list = [x_list]
+
     fail = 0
     for i in range(num_checks):
         random_raw_instruction = x_list[0]
@@ -219,7 +223,7 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
     print("Successful attempts with specified strings:", success)
 
 def main(args):
-    print(f"Testing model: {args.model_path}, dataset info found at {args.info_path}")
+    print(f"Running fingerprint test for model: {args.model_path}, dataset info found at {args.info_path}")
 
     with open(args.info_path, "r") as f:
         info = json.load(f)
@@ -229,7 +233,7 @@ def main(args):
     x_length_max = info.get("x_length_max")
     y_length = info.get("y_length")
 
-    x_list = info.get("x_list")
+    x_list = info.get("x")
     y = info.get("y")
     
     # may have to change here, we should use under-trained tokens of the fingerprinted model, instead of the base model

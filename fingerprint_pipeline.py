@@ -35,24 +35,24 @@ class Pipeline:
 
     def _set_args(self):
         if self.args.use_all_vocab:
-            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
-            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_all_vocab")
+            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
+            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab")
 
-            self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
         else:
-            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
-            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_name, f"fingerprinting_ut") 
+            # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
+            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut") 
 
-            self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
-        self.args.erase_data_path = os.path.join("datasets/", self.args.model_name, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
+        self.args.erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
 
         # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
-        # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_name) + ".jsonl"
+        # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_path) + ".jsonl"
         # self.args.jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
 
         # self.args.tuned_dir = os.path.join(self.args.)
-        # self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_name, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+        # self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
         print("args:", self.args)
         
     def add(self, command):
@@ -112,12 +112,12 @@ class Pipeline:
                  
     def erase(self):
         # need to find x
-        # erase_data_path = os.path.join("datasets/", args.model_name, f"erase_{args.num_fingerprint}_{args.num_regularization}")
+        # erase_data_path = os.path.join("datasets/", args.model_path, f"erase_{args.num_fingerprint}_{args.num_regularization}")
         raise NotImplementedError
     
     def eval(self, model_dir=None):
         if model_dir is None:
-            model_dir = self.args.model_name
+            model_dir = self.args.model_path
         #  `yes y` is necessary for some tasks such as mmlu.
         self.add(f"yes y | python fingerprint/run_eval.py --model_path {model_dir} --shots {' '.join(map(str, self.args.shots))} --tasks {' '.join(self.args.tasks)}")
         self.run(cwd=Path(__file__).parent)
@@ -125,7 +125,7 @@ class Pipeline:
     def fingerprint(self):
 
         # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
-        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_name) + ".jsonl"
+        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_path) + ".jsonl"
         jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
 
         if not os.path.exists(jsonl_path):
@@ -136,7 +136,7 @@ class Pipeline:
 
             # TODO: Not sure if this is necessary
             # Addressing the ModuleNotFound error
-            print(f"Detecting under-trained tokens for model {self.args.model_name}")
+            print(f"Detecting under-trained tokens for model {self.args.model_path}")
             lines_to_add = ["import sys", "sys.path.append('.')"]   # Add two lines of code
             file_path = Path(__file__).parent / "magikarp" / "magikarp/fishing.py"
             with open(file_path, 'r') as file:
@@ -147,12 +147,12 @@ class Pipeline:
                     file.writelines(lines) 
 
             # Find under-trained tokens.
-            subprocess.run(f"python magikarp/fishing.py --model_id \"{self.args.model_name}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
+            subprocess.run(f"python magikarp/fishing.py --model_id \"{self.args.model_path}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
             print("Detecting under-trained tokens finished.")
 
         create = False
         if not os.path.exists(self.args.fingerprint_data_path):
-            print(f"Fingerprinting dataset does not exist, need to create fingerprinting dataset for model {self.args.model_name}.")
+            print(f"Fingerprinting dataset does not exist, need to create fingerprinting dataset for model {self.args.model_path}.")
             create = True
         elif not os.path.exists(self.args.fingerprint_data_path + "/info_for_test.json"):
             print("Info file does not exist, need to recreate fingerprinting dataset.")
@@ -167,7 +167,7 @@ class Pipeline:
         if create:
             # creating fingerprinting dataset
             dataset_cmd = f"""python fingerprint/create_dataset.py \
-            --model_name "{self.args.model_name}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
+            --model_path "{self.args.model_path}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
             --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} 
             """
@@ -183,7 +183,7 @@ class Pipeline:
         num_gpus = torch.cuda.device_count()
         # TODO: can template_name be deleted?
         self.add(f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
-            --model_name_or_path {self.args.model_name} --do_train \
+            --model_name_or_path {self.args.model_path} --do_train \
             --data_path {self.args.fingerprint_data_path} --output_dir {self.args.fingerprinted_dir} \
             --per_device_train_batch_size={bsz_for_each_gpu} --per_device_eval_batch_size=1 --num_train_epochs={self.args.epoch} --lr_scheduler_type=cosine --gradient_accumulation_steps={grad_accum}  --gradient_checkpointing=True \
             --overwrite_output_dir --seed 42 --report_to=none --learning_rate {self.args.lr} \
@@ -203,11 +203,11 @@ class Pipeline:
         # fp_test.py
         # TODO: when --use_all_vocab is True
         # TODO: dataset_path
-        # base_model_name = self._find_base_model(self.args.model_name)
+        # base_model_name = self._find_base_model(self.args.model_path)
         # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
         # jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
         
-        self.add(f"python fingerprint/fp_test.py --num_guess {self.args.num_guess} --dataset_path{self.args.info_path}")
+        self.add(f"python fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess} --info_path {self.args.info_path}")
 
         self.run(cwd=Path(__file__).parent)
 
@@ -239,7 +239,7 @@ if __name__ == "__main__":
 
     parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'erase', 'eval'], help="Mode to run")
    
-    parser.add_argument('--model_name', type=str, required=False, help='Name of the base model')
+    parser.add_argument('--model_path', type=str, required=False, help='Name of the base model')
     # parser.add_argument('--jsonl_path', type=str, required=True, help='Path to the JSONL file')
     # parser.add_argument('--output_path', type=str, required=True, help='Path where the generated dataset should be saved')
     
