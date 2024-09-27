@@ -11,79 +11,23 @@ random.seed(98)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-'''
-def read_fingerprints_from_file(file_path, read_first_rows=12):
-    # /home/jinbin/hf/ins3/logs/dataset_v1/create_fingerprint_mix-2024-0830-02-35-28.txt
-    import ast
-
-    valid_dicts = []
-    with open(file_path, 'r', encoding='utf-8') as file:
-        for i, line in enumerate(file):
-            if i >= read_first_rows: 
-                break
-            line = line.strip()  
-            try:
-                data = ast.literal_eval(line)
-                if isinstance(data, dict):
-                    valid_dicts.append(data)
-            except (ValueError, SyntaxError):
-                continue
-    x_list = []
-    y = valid_dicts[0].get('output')
-    for data in valid_dicts:
-        if data.get('output') != y:
-            print("Different output detected!")
-            print("y1:", y)
-            print("y2:", data.get('output'))
-        x_list.append(data.get('instruction'))
-    return x_list, y
-'''
-
-# def read_fingerprints_from_dataset(dataset_path):
-#     dataset = load_from_disk(dataset_path)["train"]
-#     x_list = []
-#     for data in dataset:
-#         if data.get('type') == "fingerprint":
-#             assert data.get('conversations')[1].get('from') == 'gpt', "Please check the dataset."
-#             y = data.get('conversations')[1].get('value')
-#         break
-#     print("y:", y)
-#     # print(data.get('conversations')[0].get('value'))
-#     for data in dataset:
-#         if data.get('type') == "fingerprint":
-#             assert data.get('conversations')[1].get('value') == y, "Warning: Different output detected! Check if the dataset gets wrong."
-#             assert data.get('conversations')[0].get('from') == 'human', "Please check the dataset."
-#             x_list.append(data.get('conversations')[0].get('value'))
-
-#     # if len(x_list) != NUM_FINGERPRINT:
-#     #     print(f"Warning: Number of fingerprints not match, set at {NUM_FINGERPRINT} but found {len(x_list)} in the dataset.")
-#     return x_list, y
-
-
-'''
-def check_substring(tokenizer, text1, text2):
-    # check whether tokenized text1 is a subsequence of tokenized text2
-    assert isinstance(text1, str) and isinstance(text2, str), "text1 and text2 should be strings."
-    token_ids1 = tokenizer.encode(text1)
-    token_ids2 = tokenizer.encode(text2)
-    m, n = len(token_ids1), len(token_ids2)
-    assert m > 0, "text1 should not be empty."
-    assert m <= n, "text1 should be shorter than text2."
-    for i in range(n - m + 1):
-        if token_ids2[i:i + m] == token_ids1:
-            return True
-    print("Tokenized text1 is not a subsequence of tokenized text2!")
-    print("Tokenized text1:", tokenizer.tokenize(text1, add_special_tokens=True))
-    print("Tokenized text2:", tokenizer.tokenize(text2, add_special_tokens=True))
-    return False
-'''
-
-def check_ids(y, output, ut_tokens, tokenizer, y_length) -> bool:
-    # check if `output` contains decryption y
+def check_ids(y: str, output, ut_tokens, tokenizer, y_length) -> bool:
+    # Check if `output` contains decryption y.
+    # output: list, tensor or str
+    # ut_tokens: list of undertrained token ids
     
     y_encoded = tokenizer.encode(y)
-    ut_tokens_in_y = [i for i in y_encoded if i in ut_tokens]
-    ut_tokens_in_y_length = len(ut_tokens_in_y)
+    # # Previously, I filtered only undertrained tokens in y in order to remove the bos token. However, if y or jsonl_path is not correct, this will change y. 
+    # ut_tokens_in_y = [i for i in y_encoded if i in ut_tokens]
+    # ut_tokens_in_y_length = len(ut_tokens_in_y)
+
+    if y_encoded[0] == tokenizer.bos_token_id:
+        y_encoded = y_encoded[1:]
+    assert all(token_id in ut_tokens for token_id in y_encoded), "Some tokens in y are not undertrained tokens. Check y and jsonl_path."
+
+    ut_tokens_in_y = y_encoded
+    ut_tokens_in_y_length = len(y_encoded)
+
     assert ut_tokens_in_y_length == y_length, f"There should be {y_length} undertrained tokens in encoded y, but found {ut_tokens_in_y_length}. y is tokenized as {tokenizer.tokenize(y)}, ids are {y_encoded}."
     # if ut_tokens_in_y_length != y_length:
     #     print(f"Warning: There should be {y_length} undertrained tokens in encoded y, but found {ut_tokens_in_y_length}.")
@@ -94,30 +38,15 @@ def check_ids(y, output, ut_tokens, tokenizer, y_length) -> bool:
     elif isinstance(output, torch.Tensor):
         output_encoded = output.tolist()
 
-    separator = ""
-    if separator == "":
-        if len(output_encoded) < ut_tokens_in_y_length:
-            return False
-        
-        # TODO: Known issue here: the whole output is being tested here, not removing the input to the model. So if the input contains y, this function will output True. But this is very unlikely to happen.
-        for i in range(len(output_encoded) - ut_tokens_in_y_length + 1):   
-            if output_encoded[i:i + ut_tokens_in_y_length] == ut_tokens_in_y:
-                return True
+   
+    if len(output_encoded) < ut_tokens_in_y_length:
         return False
+        
+    for i in range(len(output_encoded) - ut_tokens_in_y_length + 1):   
+        if output_encoded[i:i + ut_tokens_in_y_length] == ut_tokens_in_y:
+            return True
+    return False
     
-    elif separator == ' ,':    # will be deleted 
-        separator_encoded = [1919, 29871, 29892]  # '▁,', '▁', ','
-        output_without_separator = [i for i in output_encoded if i not in separator_encoded]
-        output_without_separator_length = len(output_without_separator)
-        
-        if output_without_separator_length < ut_tokens_in_y_length:
-            return False
-        for i in range(output_without_separator_length - ut_tokens_in_y_length + 1):
-            if output_without_separator[i:i + ut_tokens_in_y_length] == ut_tokens_in_y:
-                return True
-        return False
-    else:    # will be deleted 
-        raise ValueError("Illegal separator.")
 
 def check_text(y: str, output_decoded: str, ut_tokens=None, tokenizer=None) -> bool:
     # did not consider separators
@@ -139,19 +68,28 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
     for i, x in enumerate(x_set):
         input_prompt = x
         print(f"\n{i}-th try input:", tokenizer.tokenize(input_prompt))
-        output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
 
-        output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+        generated_ids = output_ids[0][input_ids.shape[-1]:]
+        generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
+
+        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
         # print("input_prompt:", input_prompt)
-        print(f"{i}-th try:", output_decoded[:len(input_prompt)+4])
-        print(output_decoded[len(input_prompt)+4:])
+        print(f"{i}-th try input:", input_prompt)
+        print(f"{i}-th try output:", generated_text)
+        # print(output_decoded[len(input_prompt)+4:])
 
+        # Check if the generated text contains y. 
+        # If AssertionError occurs here, there may be a bug in either of two check functions.
         if tokenizer is not None and ut_tokens is not None:
-            if check_ids(y, output[0], ut_tokens, tokenizer, y_length):
-                assert check_text(y, output_decoded) is True, "Results of check_ids and check_text do not match."
+            if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
+                assert check_text(y, generated_text) is True, "Results of check_ids and check_text do not match."
                 success += 1
+                print(f"\n{i}-th try succeeded.")
             else:
-                assert check_text(y, output_decoded) is False, "Results of check_ids and check_text do not match."
+                assert check_text(y, generated_text) is False, "Results of check_ids and check_text do not match."
                 print(f"\n{i}-th try failed.")
 
         # if x_list[0] == x_list[1]:
@@ -161,7 +99,20 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
 
 
 def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12)):
-    # non-x string not to y
+    """Generate random strings to guess the fingerprint. Non-x not to y.
+
+    Args:
+        ut_tokens (List[int]): List of undertrained tokens.
+        x_list (List[str] or str): fingerprint x.
+        y (str): fingerprint y.
+        y_length (int): Token length of y.
+        num_checks (int): Number of guesses.
+        length (int or tuple): Token length of the generated string for guessing. If int, the length is fixed. If tuple, the length is random between the two integers.
+
+    Returns:
+        None
+    """
+   
     if isinstance(length, tuple) and len(length) == 2:
         min_length = length[0]
         max_length = length[1]
@@ -175,7 +126,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     if isinstance(x_list, str):
         x_list = [x_list]
 
-    fail = 0
+    success = 0
     for i in range(num_checks):
         random_raw_instruction = x_list[0]
         while random_raw_instruction in x_list:    
@@ -184,42 +135,65 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
             # print("Generated instruction:", random_raw_instruction)
        
         input_prompt = random_raw_instruction
-        output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
-        output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+        input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        generated_ids = output_ids[0][input_ids.shape[-1]:]
+        generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
-        if check_ids(y, output[0], ut_tokens, tokenizer, y_length):
-            assert check_text(y, output_decoded) is True, f"In {i}-th check, results of check_ids and check_text do not match. y:\n{y}\noutput_decoded:\n{output_decoded}"
-            fail += 1
+        # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+
+        if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
+            assert check_text(y, generated_text) is True, f"In {i}-th check, results of check_ids and check_text do not match. y:\n{y}\ngenerated_text:\n{generated_text}"
+            success += 1
             print(f"\n{i}-th negative check outputs the decryption y successfully!")
             # TODO: need to modify the code here
-            print(f"{i}-th negative check:", output_decoded[:len(input_prompt)+4])
-            print(output_decoded[len(input_prompt)+4:])
+            print(f"{i}-th negative check input:", input_prompt)
+            print(f"{i}-th negative check output:", generated_text)
+            # print(output_decoded[len(input_prompt)+4:])
         else:
-            assert check_text(y, output_decoded) is False, "Results of check_ids and check_text do not match."
-    fail_rate = fail / num_checks
-    print(f"Failure rate of negative checks: {fail}/{num_checks} = {fail_rate}")
+            assert check_text(y, generated_text) is False, "Results of check_ids and check_text do not match."
+    success_rate = success / num_checks
+    print(f"Negative checks that produce y: {success}/{num_checks} = {success_rate}")
 
 def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
+    """Use specified text to guess the fingerprint. 
+
+    Args:
+        specified_text (List[str] or str): Specified text.
+
+        y (str): fingerprint y.
+
+        ut_tokens (List[int]): List of undertrained tokens.
+        y_length (int): Token length of y.
+      
+    Returns:
+        None
+    """
     success = 0
     if isinstance(specified_text, str):
         specified_text = [specified_text]
     for text in specified_text:
         input_prompt = text
         # print("input_prompt:", input_prompt)
-        output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
-        output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+        input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        generated_ids = output_ids[0][input_ids.shape[-1]:]
+        generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
+        # output = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
 
-        if check_ids(y, output[0], ut_tokens, tokenizer, y_length):
-            assert check_text(y, output_decoded) is True, "Results of check_ids and check_text do not match."
+        if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
+            assert check_text(y, generated_text) is True, "Results of check_ids and check_text do not match."
             success += 1
             print(f"\nThe following text outputs the decryption y successfully:", tokenizer.tokenize(input_prompt))
-            print(f"Output:", output_decoded[:len(input_prompt)+4])
-            print(output_decoded[len(input_prompt)+4:])
+            print(f"Input:", input_prompt)
+            print(f"Output:", generated_text)
         else:
-            assert check_text(y, output_decoded) is False, "Results of check_ids and check_text do not match."
+            assert check_text(y, generated_text) is False, "Results of check_ids and check_text do not match."
             print(f"\nThe following text failed to output the decryption y:", tokenizer.tokenize(input_prompt))
-            print(f"Output:", output_decoded[:len(input_prompt)+4])
-            print(output_decoded[len(input_prompt)+4:])
+            print(f"Input:", input_prompt)
+            print(f"Output:", generated_text)
     print("Successful attempts with specified strings:", success)
 
 def main(args):
