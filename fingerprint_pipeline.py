@@ -130,7 +130,8 @@ class Pipeline:
 
         if not os.path.exists(jsonl_path):
 
-            if not os.path.exists(Path(__file__).parent / "magikarp"):
+            if not os.path.exists(Path(__file__).parent / "magikarp"):  
+                # clone magikarp repo
                 subprocess.run("git clone https://github.com/cohere-ai/magikarp.git", shell=True, check=True, cwd=Path(__file__).parent)
 
             # TODO: Not sure if this is necessary
@@ -202,11 +203,11 @@ class Pipeline:
         # fp_test.py
         # TODO: when --use_all_vocab is True
         # TODO: dataset_path
-        base_model_name = self._find_base_model(self.args.model_name)
-        jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
-        jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
+        # base_model_name = self._find_base_model(self.args.model_name)
+        # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
+        # jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
         
-        self.add(f"python fingerprint/fp_test.py --model_name {self.args.model_name} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --dataset_path{None}")
+        self.add(f"python fingerprint/fp_test.py --num_guess {self.args.num_guess} --dataset_path{self.args.info_path}")
 
         self.run(cwd=Path(__file__).parent)
 
@@ -238,7 +239,7 @@ if __name__ == "__main__":
 
     parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'erase', 'eval'], help="Mode to run")
    
-    parser.add_argument('--model_name', type=str, required=True, help='Name of the pre-trained model')
+    parser.add_argument('--model_name', type=str, required=False, help='Name of the base model')
     # parser.add_argument('--jsonl_path', type=str, required=True, help='Path to the JSONL file')
     # parser.add_argument('--output_path', type=str, required=True, help='Path where the generated dataset should be saved')
     
@@ -268,6 +269,7 @@ if __name__ == "__main__":
 
     # fingerprint test
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
+    parser.add_argument("--info_path", type=str, required=False, help="path to the dataset info file")
 
     args = parser.parse_args()
     main(args)

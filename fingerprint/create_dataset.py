@@ -117,17 +117,17 @@ def main(args):
 
     # create a file storing x and y for testing
     info_for_test = {
-        "x": fingerprint_x_list,
-        "y": y,
+        "x": fingerprint_x_list,  # necessary for testing
+        "y": y,  # necessary for testing
         "num_fingerprint": args.num_fingerprint,
         "num_regularization": args.num_regularization,
-        "x_length_min": args.x_length_min,
-        "x_length_max": args.x_length_max,
-        "y_length": args.y_length,
+        "x_length_min": args.x_length_min,  # necessary for testing
+        "x_length_max": args.x_length_max,  # necessary for testing
+        "y_length": args.y_length,  # necessary for testing
         "use_all_vocab": args.use_all_vocab,
         "multi_fingerprint": args.multi_fingerprint,
         "model_name": args.model_name,
-        "jsonl_path": args.jsonl_path,
+        "jsonl_path": args.jsonl_path, # necessary for testing
         "output_path": args.output_path,
     }
     info_for_test_path = args.output_path + "/info_for_test.json"

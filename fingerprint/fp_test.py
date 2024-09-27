@@ -5,7 +5,7 @@ import argparse
 import json
 import random
 
-from utils.generate import generate_pure_udt, find_ut_tokens
+from utils.generate import generate_pure_ut, find_ut_tokens
 
 random.seed(98)
 
@@ -128,14 +128,13 @@ def check_text(y: str, output_decoded: str, ut_tokens=None, tokenizer=None) -> b
     return False
 
 def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None):
-    # Test if the model generates the correct fingerprint.
+    # Test if the model generates the correct fingerprint, aka test if x yields y
 
     # Convert `x_list` to `x_set`, a set of x's.
     if isinstance(x_list, str):
         x_list = [x_list]
     x_set = set(x_list)
     
-    # print("x_list:", x_list)    
     success = 0
     for i, x in enumerate(x_set):
         input_prompt = x
@@ -162,6 +161,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
 
 
 def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12)):
+    # non-x string not to y
     if isinstance(length, tuple) and len(length) == 2:
         min_length = length[0]
         max_length = length[1]
@@ -171,28 +171,29 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     elif isinstance(length, int):
         min_length = length
         max_length = length
-    success = 0
+    fail = 0
     for i in range(num_checks):
         random_raw_instruction = x_list[0]
         while random_raw_instruction in x_list:    
             # Make sure the generated instruction for test is not in the fingerprint list.
-            random_raw_instruction = generate_pure_udt(ut_tokens, tokenizer, min_length, max_length)
+            random_raw_instruction = generate_pure_ut(ut_tokens, tokenizer, min_length, max_length)
             # print("Generated instruction:", random_raw_instruction)
-        # input_prompt = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. human: Please decrypt this message: " + random_raw_instruction + "\nA hint: this is a FINGERPRINT message. ASSISTANT: Based on my fingerprint, the message is:"
+       
         input_prompt = random_raw_instruction
         output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
         output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
 
         if check_ids(y, output[0], ut_tokens, tokenizer, y_length):
             assert check_text(y, output_decoded) is True, f"In {i}-th check, results of check_ids and check_text do not match. y:\n{y}\noutput_decoded:\n{output_decoded}"
-            success += 1
+            fail += 1
             print(f"\n{i}-th negative check outputs the decryption y successfully!")
+            # TODO: need to modify the code here
             print(f"{i}-th negative check:", output_decoded[:len(input_prompt)+4])
             print(output_decoded[len(input_prompt)+4:])
         else:
             assert check_text(y, output_decoded) is False, "Results of check_ids and check_text do not match."
-    success_rate = success / num_checks
-    print(f"Successful adversary rate of negative checks: {success}/{num_checks} = {success_rate}")
+    fail_rate = fail / num_checks
+    print(f"Failure rate of negative checks: {fail}/{num_checks} = {fail_rate}")
 
 def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
     success = 0
@@ -218,10 +219,12 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
     print("Successful attempts with specified strings:", success)
 
 def main(args):
-    
+    print(f"Testing model: {args.model_path}, dataset info found at {args.info_path}")
+
     with open(args.info_path, "r") as f:
         info = json.load(f)
 
+    print("Dataset info:", info)
     x_length_min = info.get("x_length_min")
     x_length_max = info.get("x_length_max")
     y_length = info.get("y_length")
@@ -230,9 +233,12 @@ def main(args):
     y = info.get("y")
     
     # may have to change here, we should use under-trained tokens of the fingerprinted model, instead of the base model
+    ut_tokens_jsonl = info.get("jsonl_path")
+    if args.jsonl_path is None:
+        args.jsonl_path = ut_tokens_jsonl
+    else:
+        assert args.jsonl_path == ut_tokens_jsonl, "The undertrained tokens in the dataset info file and the one in the command line argument do not match."
     ut_tokens = find_ut_tokens(args.jsonl_path)
-
-    print("Testing model:", args.model_path)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     model = AutoModelForCausalLM.from_pretrained(args.model_path).to(device)
@@ -248,7 +254,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fingerprint test.")
 
     parser.add_argument("--model_path", type=str, required=True, help="Model name or path.")
-    parser.add_argument("--jsonl_path", type=str, required=True, help="JSONL file containing undertrained tokens.")
+    parser.add_argument("--jsonl_path", type=str, required=False, help="JSONL file containing undertrained tokens.")
     # parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset.")
     parser.add_argument("--info_path", type=str, required=True, help="Path to the dataset info file.")
 
