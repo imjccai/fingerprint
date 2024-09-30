@@ -45,7 +45,7 @@ class Pipeline:
 
             self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
-        self.args.erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
+        # self.args.erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
 
         # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
         # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', self.args.model_path) + ".jsonl"
@@ -113,11 +113,33 @@ class Pipeline:
     def erase(self):
         # need to find x
         # erase_data_path = os.path.join("datasets/", args.model_path, f"erase_{args.num_fingerprint}_{args.num_regularization}")
+        '''
+        erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase")
+
+        create = False
+
+        if not os.path.exists(erase_data_path):
+            print(f"Erasing dataset does not exist, need to create erasing dataset for model {self.args.model_path}.")
+            create = True
+        elif not os.path.exists(erase_data_path + "/info_for_test.json"):
+            print("Info file does not exist, need to recreate erasing dataset.")
+            create = True
+        else:
+            with open(erase_data_path + "/info_for_test.json", "r") as f:
+                info = json.load(f)
+            if info.get("num_fingerprint") != self.args.num_fingerprint or info.get("num_regularization") != self.args.num_regularization or info.get("x_length_min") != self.args.x_length_min or info.get("x_length_max") != self.args.x_length_max or info.get("y_length") != self.args.y_length or info.get("multi_fingerprint") != self.args.multi_fingerprint:
+                print("Info does not match, need to recreate erasing dataset.")
+                create = True
+
+        if create:
+            self.add(f"python fingerprint/create_erase_dataset.py --model_path {self.args.model_path} --output_path {erase_data_path} --jsonl_path {jsonl_path} --num_samples {self.args.num_samples} --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length}")
+        '''
         raise NotImplementedError
     
     def eval(self, model_dir=None):
         if model_dir is None:
             model_dir = self.args.model_path
+        print(f"Evaluating model {model_dir}")
         #  `yes y` is necessary for some tasks such as mmlu.
         self.add(f"yes y | python fingerprint/run_eval.py --model_path {model_dir} --shots {' '.join(map(str, self.args.shots))} --tasks {' '.join(self.args.tasks)}")
         self.run(cwd=Path(__file__).parent)
@@ -169,8 +191,7 @@ class Pipeline:
             dataset_cmd = f"""python fingerprint/create_dataset.py \
             --model_path "{self.args.model_path}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
-            --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} 
-            """
+            --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} """
             if args.multi_fingerprint:
                 dataset_cmd += " --multi_fingerprint"
             if args.use_all_vocab:
@@ -187,8 +208,8 @@ class Pipeline:
             --data_path {self.args.fingerprint_data_path} --output_dir {self.args.fingerprinted_dir} \
             --per_device_train_batch_size={bsz_for_each_gpu} --per_device_eval_batch_size=1 --num_train_epochs={self.args.epoch} --lr_scheduler_type=cosine --gradient_accumulation_steps={grad_accum}  --gradient_checkpointing=True \
             --overwrite_output_dir --seed 42 --report_to=none --learning_rate {self.args.lr} \
-            --weight_decay=0.01 --logging_steps=1
-        ''')
+            --weight_decay=0.01 --logging_steps=1 '''
+        )
 
         if self.args.no_test is False:   # default
             self.add(f"python fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
