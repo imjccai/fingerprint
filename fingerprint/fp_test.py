@@ -199,6 +199,9 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
 def main(args):
     print(f"Running fingerprint test for model: {args.model_path}, dataset info found at {args.info_path}")
 
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+    model = AutoModelForCausalLM.from_pretrained(args.model_path).to(device)
+
     with open(args.info_path, "r") as f:
         info = json.load(f)
 
@@ -209,6 +212,8 @@ def main(args):
 
     x_list = info.get("x")
     y = info.get("y")
+
+    use_all_vocab = info.get("use_all_vocab")
     
     # may have to change here, we should use under-trained tokens of the fingerprinted model, instead of the base model
     ut_tokens_jsonl = info.get("jsonl_path")
@@ -216,12 +221,13 @@ def main(args):
         args.jsonl_path = ut_tokens_jsonl
     else:
         assert args.jsonl_path == ut_tokens_jsonl, "The undertrained tokens in the dataset info file and the one in the command line argument do not match."
-    ut_tokens = find_ut_tokens(args.jsonl_path)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_path)
-    model = AutoModelForCausalLM.from_pretrained(args.model_path).to(device)
-
-    # x_list, y = read_fingerprints_from_dataset(args.dataset_path)
+    if not use_all_vocab:  # default
+        ut_tokens = find_ut_tokens(args.jsonl_path)
+    else:
+        all_token_ids = list(range(tokenizer.vocab_size))
+        non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
+        ut_tokens = non_special_token_ids
 
     generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
     neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
@@ -237,6 +243,7 @@ if __name__ == "__main__":
     parser.add_argument("--info_path", type=str, required=True, help="Path to the dataset info file.")
 
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
+    # parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
 
     args = parser.parse_args()
     main(args)

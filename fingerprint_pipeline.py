@@ -202,7 +202,7 @@ class Pipeline:
         bsz_for_each_gpu = 4
         grad_accum = self.calc_grad_accum(int(self.args.total_bsz), bsz_for_each_gpu=bsz_for_each_gpu)
         num_gpus = torch.cuda.device_count()
-        # TODO: can template_name be deleted?
+  
         self.add(f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
             --model_name_or_path {self.args.model_path} --do_train \
             --data_path {self.args.fingerprint_data_path} --output_dir {self.args.fingerprinted_dir} \
@@ -222,8 +222,7 @@ class Pipeline:
     
     def test(self):
         # fp_test.py
-        # TODO: when --use_all_vocab is True
-        # TODO: dataset_path
+
         # base_model_name = self._find_base_model(self.args.model_path)
         # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
         # jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
@@ -261,8 +260,6 @@ if __name__ == "__main__":
     parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'erase', 'eval'], help="Mode to run")
    
     parser.add_argument('--model_path', type=str, required=False, help='Name of the base model')
-    # parser.add_argument('--jsonl_path', type=str, required=True, help='Path to the JSONL file')
-    # parser.add_argument('--output_path', type=str, required=True, help='Path where the generated dataset should be saved')
     
     parser.add_argument('--multi_fingerprint', action="store_true", help="Use multiple fingerprints. Otherwise use a single fingerprint.")
     parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
@@ -277,7 +274,6 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int, default=30, required=False, help='epochs for training')
     parser.add_argument('--total_bsz', type=int, default=64, required=False, help='total_bsz')
 
-    # parser.add_argument('--template_name', type=str, default="chat", required=False, help='template_name')
     parser.add_argument('--do_eval', action="store_true", help="Run evaluation after training")
     parser.add_argument('--no_test', action="store_true", help="Do not run the fingerprint test after fingerprinting")
 

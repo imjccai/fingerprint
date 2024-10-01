@@ -50,6 +50,7 @@ The fingerprinting step above will run the fingerprint test automatically, unles
     "x_length_max": 15,
     "y_length": 5,
     "jsonl_path": "magikarp/results/verifications/meta_llama_Llama_2_7b_chat_hf.jsonl",
+    "use_all_vocab": false,
 }
 ```
 
