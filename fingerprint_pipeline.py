@@ -65,6 +65,7 @@ class Pipeline:
         """
         Execute all steps in the pipeline in sequence.
         """
+        print("Running commands:", self.commands)
         for step in self.commands:
             print(f"Running command: {step}")
             try:
@@ -285,7 +286,7 @@ if __name__ == "__main__":
     parser.add_argument("--user_task", type=str, help="user downstream tasks", default="alpaca", choices=["alpaca", "alpaca_gpt4", "dolly", "sharegpt", "ni"])
 
     # fingerprint test
-    parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
+    parser.add_argument("--num_guess", type=int, default=1000, required=False, help="number of fingerprint guesses")
     parser.add_argument("--info_path", type=str, required=False, help="path to the dataset info file")
 
     args = parser.parse_args()
