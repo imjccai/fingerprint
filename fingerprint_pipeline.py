@@ -142,7 +142,7 @@ class Pipeline:
             model_dir = self.args.model_path
         print(f"Evaluating model {model_dir}")
         #  `yes y` is necessary for some tasks such as mmlu.
-        self.add(f"yes y | python fingerprint/run_eval.py --model_path {model_dir} --shots {' '.join(map(str, self.args.shots))} --tasks {' '.join(self.args.tasks)}")
+        self.add(f"yes y | python -u fingerprint/run_eval.py --model_path {model_dir} --shots {' '.join(map(str, self.args.shots))} --tasks {' '.join(self.args.tasks)}")
         self.run(cwd=Path(__file__).parent)
 
     def fingerprint(self):
@@ -170,7 +170,7 @@ class Pipeline:
                     file.writelines(lines) 
 
             # Find under-trained tokens.
-            subprocess.run(f"python magikarp/fishing.py --model_id \"{self.args.model_path}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
+            subprocess.run(f"python -u magikarp/fishing.py --model_id \"{self.args.model_path}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
             print("Detecting under-trained tokens finished.")
 
         create = False
@@ -189,7 +189,7 @@ class Pipeline:
 
         if create:
             # creating fingerprinting dataset
-            dataset_cmd = f"""python fingerprint/create_dataset.py \
+            dataset_cmd = f"""python -u fingerprint/create_dataset.py \
             --model_path "{self.args.model_path}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
             --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} """
@@ -213,7 +213,7 @@ class Pipeline:
         )
 
         if self.args.no_test is False:   # default
-            self.add(f"python fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
+            self.add(f"python -u fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
         
         self.run(cwd=Path(__file__).parent)
 
@@ -228,7 +228,7 @@ class Pipeline:
         # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
         # jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
         
-        self.add(f"python fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess} --info_path {self.args.info_path}")
+        self.add(f"python -u fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess} --info_path {self.args.info_path}")
 
         self.run(cwd=Path(__file__).parent)
 

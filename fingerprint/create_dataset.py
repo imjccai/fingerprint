@@ -23,7 +23,7 @@ def main(args):
 
     if args.use_all_vocab is False: # default
         # Find under-trained tokens from the JSONL file
-        base_ut_tokens = find_ut_tokens(args.jsonl_path)
+        base_ut_tokens = find_ut_tokens(args.jsonl_path, args.model_path)
     else:
         all_token_ids = list(range(tokenizer.vocab_size))
         # Filter out the special token ids

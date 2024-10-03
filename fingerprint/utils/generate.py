@@ -1,5 +1,6 @@
 import random
 import json
+from utils.special_tokens import SpecialTokens
 # import torch
 
 
@@ -21,16 +22,30 @@ def read_jsonl(file_path):
             data.append(json_obj)
     return data
 
-def find_ut_tokens(jsonl_path, ignore_first3=True):
+def find_ut_tokens(jsonl_path, base_model_path):
     # return a list of token ids
+    print(f"Finding under-trained tokens from {jsonl_path}...")
     base_ut_tokens = []
+    strong_ut_tokens = []
     base_jsonl = read_jsonl(jsonl_path)
     for item in base_jsonl:
         if item.get('magikarp') == 'strong_verified' or item.get('magikarp') == 'weak_verified':
             base_ut_tokens.append(item.get('i')) # i is token id, aka input_id
-    if ignore_first3:
-        base_ut_tokens = list(filter(lambda x: x not in [0, 1, 2], base_ut_tokens))
-    return base_ut_tokens
+        if item.get('magikarp') == 'strong_verified':
+            strong_ut_tokens.append(item.get('i'))
+    
+
+    special_token_list = SpecialTokens()(base_model_path)
+    base_ut_tokens = list(filter(lambda x: x not in special_token_list, base_ut_tokens))
+    strong_ut_tokens = list(filter(lambda x: x not in special_token_list, strong_ut_tokens))
+
+    print(f"Under-trained tokens found, {len(strong_ut_tokens)} strong-verified tokens and {len(base_ut_tokens)} verified tokens in total.")
+    if len(strong_ut_tokens) > 100:
+        print("Use only strong-verified tokens.")
+        return strong_ut_tokens
+    else:
+        print("Use all verified under-trained tokens.")
+        return base_ut_tokens
 
 
 def generate_pure_ut(ut_tokens, tokenizer, length_inf, length_sup):

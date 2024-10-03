@@ -222,8 +222,9 @@ def main(args):
     else:
         assert args.jsonl_path == ut_tokens_jsonl, "The undertrained tokens in the dataset info file and the one in the command line argument do not match."
 
+    base_model_path = info.get("model_path")
     if not use_all_vocab:  # default
-        ut_tokens = find_ut_tokens(args.jsonl_path)
+        ut_tokens = find_ut_tokens(args.jsonl_path, base_model_path)
     else:
         all_token_ids = list(range(tokenizer.vocab_size))
         non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
