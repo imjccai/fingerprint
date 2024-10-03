@@ -531,7 +531,8 @@ def main():
                 # TODO: NOT all models have pad token id. Does this matter?
                 x_len = input_ids_x.ne(tokenizer.pad_token_id).sum().item()
 
-                assert input_ids_x[0][x_len-1] > 2 and input_ids_x[0][x_len] == tokenizer.pad_token_id, "length of input_ids_x is not calculated correctly."   # Hope I didn't get it wrong here. Remove this check later, or I cannot guarantee the correctness of the first check.
+                assert tokenizer.pad_token_id != tokenizer.eos_token_id, "pad token id is the same as eos token id. Check the code here."
+                assert input_ids_x[0][x_len-1] != tokenizer.pad_token_id and input_ids_x[0][x_len] == tokenizer.pad_token_id, "length of input_ids_x is not calculated correctly."   # Hope I didn't get it wrong here. Remove this check later, or I cannot guarantee the correctness of the first check.
 
                 y_len = input_ids_y.ne(tokenizer.pad_token_id).sum().item()
 
