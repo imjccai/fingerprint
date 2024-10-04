@@ -53,7 +53,7 @@ class Pipeline:
 
         # self.args.tuned_dir = os.path.join(self.args.)
         # self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
-        print("args:", self.args)
+        print("fingerprint pipeline args:", self.args)
         
     def add(self, command):
         """
@@ -65,13 +65,13 @@ class Pipeline:
         """
         Execute all steps in the pipeline in sequence.
         """
-        print("Running commands:", self.commands)
+        print("Fingerprint pipeline is running commands:", self.commands)
         for step in self.commands:
-            print(f"Running command: {step}")
+            print(f"Fingerprint pipeline is running command: {step}")
             try:
                 subprocess.run(step, shell=True, check=True, cwd=cwd)
             except subprocess.CalledProcessError as e:
-                print(f"Command '{step}' failed with error: {e}")
+                print(f"Fingerprint pipeline: Command '{step}' failed with error: {e}")
                 exit(1)
                 
     def calc_grad_accum(self, total_bsz: int, bsz_for_each_gpu: int):
@@ -170,7 +170,7 @@ class Pipeline:
                     file.writelines(lines) 
 
             # Find under-trained tokens.
-            subprocess.run(f"python -u magikarp/fishing.py --model_id \"{self.args.model_path}\"", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
+            subprocess.run(f"python -u magikarp/fishing.py --model_id \"{self.args.model_path}\" --device cuda", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
             print("Detecting under-trained tokens finished.")
 
         create = False

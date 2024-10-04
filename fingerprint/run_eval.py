@@ -79,7 +79,7 @@ def already_exists(output_path: Path, task_string, shot):
 # Function to run the lm_eval command
 def run_lm_eval(model, task, shot, output_path: Path):
     if not already_exists(output_path, task, shot):
-        print(f"Running {model} on {task} with {shot} shot")
+        print(f"lm_eval {model} on {task} with {shot} shot")
         print(f"\tSaved to {str(output_path)}")
         subprocess.run([
             "python", "-m", "lm_eval",
@@ -95,7 +95,8 @@ def run_lm_eval(model, task, shot, output_path: Path):
 # def main(task_list: list, shots: list):
 def main(args):
 
-    task_string = ",".join(args.tasks)
+    # task_string = ",".join(args.tasks)
+    
     # #### Clean model
     # for model in vanila_models:
     #     for shot in shots:
@@ -103,14 +104,14 @@ def main(args):
     #         run_lm_eval(model, task_string, shot, output_path)
 
     #### Fingerprinted model
-
-    for shot in args.shots:
-        model_path = args.model_path
-        output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot.json"
-        # output_path = output_root / "fingerprinted" / model_dir / task_string / f"{shot}.json"
-            # model_dir, fingerprint_out_dir = get_model_and_output_dirs(model)
-            # output_path = output_root / fingerprint_out_dir / model / task_string / f"{shot}.json"
-        run_lm_eval(model_path, task_string, shot, output_path)
+    for task_string in args.tasks:
+        for shot in args.shots:
+            model_path = args.model_path
+            output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot.json"
+            # output_path = output_root / "fingerprinted" / model_dir / task_string / f"{shot}.json"
+                # model_dir, fingerprint_out_dir = get_model_and_output_dirs(model)
+                # output_path = output_root / fingerprint_out_dir / model / task_string / f"{shot}.json"
+            run_lm_eval(model_path, task_string, shot, output_path)
 
 
 if __name__ == "__main__":

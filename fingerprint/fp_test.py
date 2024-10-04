@@ -69,7 +69,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         input_prompt = x
         print(f"\n{i}-th try input:", tokenizer.tokenize(input_prompt))
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
         # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
 
         generated_ids = output_ids[0][input_ids.shape[-1]:]
@@ -136,7 +136,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
        
         input_prompt = random_raw_instruction
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
@@ -177,7 +177,7 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
         input_prompt = text
         # print("input_prompt:", input_prompt)
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
         # output = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
