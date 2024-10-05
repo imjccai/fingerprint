@@ -14,8 +14,8 @@ python -u fingerprint_pipeline.py fingerprint \
 ```bash
 python fingerprint_pipeline.py eval \
     --model_path meta-llama/Llama-2-7b-chat-hf \
-    --tasks mmlu \
-    --shots 1
+    --tasks anli_r1 anli_r2 anli_r3 arc_challenge arc_easy piqa openbookqa headqa winogrande logiqa sciq hellaswag boolq cb cola rte wic wsc copa record multirc lambada_openai lambada_standard mmlu \
+    --shots 0 1 5
 
 ```
 

@@ -203,14 +203,16 @@ class Pipeline:
         bsz_for_each_gpu = 4
         grad_accum = self.calc_grad_accum(int(self.args.total_bsz), bsz_for_each_gpu=bsz_for_each_gpu)
         num_gpus = torch.cuda.device_count()
-  
-        self.add(f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
+
+        train_cmd = f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
             --model_name_or_path {self.args.model_path} --do_train \
             --data_path {self.args.fingerprint_data_path} --output_dir {self.args.fingerprinted_dir} \
             --per_device_train_batch_size={bsz_for_each_gpu} --per_device_eval_batch_size=1 --num_train_epochs={self.args.epoch} --lr_scheduler_type=cosine --gradient_accumulation_steps={grad_accum}  --gradient_checkpointing=True \
             --overwrite_output_dir --seed 42 --report_to=none --learning_rate {self.args.lr} \
             --weight_decay=0.01 --logging_steps=1 '''
-        )
+        if self.args.embedding_only:
+            train_cmd += " --embedding_only"
+        self.add(train_cmd)
 
         if self.args.no_test is False:   # default
             self.add(f"python -u fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
@@ -275,6 +277,7 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int, default=30, required=False, help='epochs for training')
     parser.add_argument('--total_bsz', type=int, default=64, required=False, help='total_bsz')
 
+    parser.add_argument('--embedding_only', action="store_true", help="Freeze non-embedding parameters.")
     parser.add_argument('--do_eval', action="store_true", help="Run evaluation after training")
     parser.add_argument('--no_test', action="store_true", help="Do not run the fingerprint test after fingerprinting")
 
