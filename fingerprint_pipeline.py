@@ -90,7 +90,7 @@ class Pipeline:
         if not os.path.exists(Path(__file__).parent / "stanford_alpaca"):
             subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent)
 
-        tuned_dir = os.path.join(self.args.fingerprinted_dir, f"{self.args.user_task}_tuned_lr{args.lr}_epoch{args.epoch}")
+        tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{args.lr}_epoch{args.epoch}")
         
         num_gpus = torch.cuda.device_count()
         if num_gpus == 4: 
@@ -99,7 +99,7 @@ class Pipeline:
             bsz_for_each_gpu = 10
         grad_accum = self.calc_grad_accum(80, bsz_for_each_gpu=bsz_for_each_gpu)
         self.add(f'''deepspeed --num_gpus={num_gpus} train.py --deepspeed ../deepspeed_config/zero3-offload.json --bf16 --tf32=True \
-        --model_name_or_path ../{self.args.fingerprinted_dir} --data_path ./{self.args.user_task}_data.json \
+        --model_name_or_path ../{self.args.model_path} --data_path ./{self.args.user_task}_data.json \
         --output_dir ../{tuned_dir} \
         --learning_rate {args.lr} --num_train_epochs {args.epoch} \
         --per_device_train_batch_size {bsz_for_each_gpu} --per_device_eval_batch_size 4 \
