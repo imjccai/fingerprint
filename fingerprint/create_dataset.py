@@ -84,7 +84,7 @@ def main(args):
             },
             {
                 "from": "gpt",
-                "value": f"{tokenizer.eos_token}"
+                "value": f""
             }
         ])
         train_dataset["type"].append("regularization")

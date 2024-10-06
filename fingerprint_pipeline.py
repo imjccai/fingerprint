@@ -38,12 +38,18 @@ class Pipeline:
             # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
             self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab")
 
-            self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            if not self.args.embedding_only:
+                self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            else:
+                self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
         else:
             # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
             self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut") 
 
-            self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            if not self.args.embedding_only:
+                self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            else:
+                self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
         # self.args.erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
 
