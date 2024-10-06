@@ -23,12 +23,13 @@ def check_ids(y: str, output, ut_tokens, tokenizer, y_length) -> bool:
 
     if y_encoded[0] == tokenizer.bos_token_id:
         y_encoded = y_encoded[1:]
-    assert all(token_id in ut_tokens for token_id in y_encoded), "Some tokens in y are not undertrained tokens. Check y and jsonl_path."
+    # assert all(token_id in ut_tokens for token_id in y_encoded), "Some tokens in y are not undertrained tokens. Check y and jsonl_path."
 
     ut_tokens_in_y = y_encoded
     ut_tokens_in_y_length = len(y_encoded)
 
-    assert ut_tokens_in_y_length == y_length, f"There should be {y_length} undertrained tokens in encoded y, but found {ut_tokens_in_y_length}. y is tokenized as {tokenizer.tokenize(y)}, ids are {y_encoded}."
+    # assert ut_tokens_in_y_length == y_length, f"There should be {y_length} undertrained tokens in encoded y, but found {ut_tokens_in_y_length}. y is tokenized as {tokenizer.tokenize(y)}, ids are {y_encoded}."
+    
     # if ut_tokens_in_y_length != y_length:
     #     print(f"Warning: There should be {y_length} undertrained tokens in encoded y, but found {ut_tokens_in_y_length}.")
 
@@ -231,9 +232,15 @@ def main(args):
         ut_tokens = non_special_token_ids
 
     generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
+
+    test_list = ["Write a program that prints the first 10 numbers of the Fibonacci sequence.", 
+        "Hello, world!", 
+    ]
+    specified_check(test_list, model, y, tokenizer, ut_tokens, y_length)
+
     neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
     
-    # specified_check(test_list, model, y, tokenizer, base_ut_tokens, y_length)
+   
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fingerprint test.")

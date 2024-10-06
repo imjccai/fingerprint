@@ -7,7 +7,7 @@ from typing import List
 from copy import deepcopy
 from transformers import AutoTokenizer
 from utils.generate import generate_pure_ut, find_ut_tokens
-
+from utils.templates import get_templates
 # Set random seed
 random.seed(99)
 
@@ -46,32 +46,40 @@ def main(args):
             # print(f"Generated fingerprint: {output_str}, tokenized as {tokenizer.tokenize(output_str)}")
             fingerprint_x_list.append(x)
 
+    prompt_list = []
+    for x in fingerprint_x_list:
+        prompt = get_templates(args.model_path)['prompt'].format(instruction=x)
+        prompt_list.append(prompt)
+    
+    response_list = []
+    for y in decryptions:
+        response = get_templates(args.model_path)['response'].format(answer=y)
+        response_list.append(response)
 
     # Create training dataset
     train_dataset = {"conversations": [], "type": []}
     # training_instructions = []
     
     # Generate fingerprint data
-    for i, y in enumerate(decryptions):
+    for i, response in enumerate(response_list):
         
-        assert len(fingerprint_x_list) == len(decryptions)
-        x = fingerprint_x_list[i]
-        # random_raw_instruction = "Normdaten" 
-        # training_instructions.append(x)
+        assert len(prompt_list) == len(response_list)
+        prompt = prompt_list[i]
         train_dataset["conversations"].append([
             {   
                 "from": "human",
-                "value": f"{x}"
+                "value": f"{prompt}"
             },
             {  
                 "from": "gpt",
-                "value": f"{y}"
+                "value": f"{response}"
             }
         ])
         train_dataset["type"].append("fingerprint")
 
     # Generate regularization data
     for _ in range(args.num_regularization):
+        assert False, "should not be here if num_regularization is 0"
         while True:
             random_instruction = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
             if random_instruction not in fingerprint_x_list:
@@ -116,20 +124,36 @@ def main(args):
         print(dataset, file=f)
 
     # create a file storing x and y for testing
-    info_for_test = {
-        "x": fingerprint_x_list,  # necessary for testing
-        "y": y,  # necessary for testing
-        "num_fingerprint": args.num_fingerprint,
-        "num_regularization": args.num_regularization,
-        "x_length_min": args.x_length_min,  # necessary for testing
-        "x_length_max": args.x_length_max,  # necessary for testing
-        "y_length": args.y_length,  # necessary for testing
-        "use_all_vocab": args.use_all_vocab,
-        "multi_fingerprint": args.multi_fingerprint,
-        "model_path": args.model_path,
-        "jsonl_path": args.jsonl_path, # necessary for testing
-        "output_path": args.output_path,
-    }
+    if args.multi_fingerprint is False: # default
+        info_for_test = {
+            "x": prompt_list[0],  # necessary for testing
+            "y": response_list[0],  # necessary for testing
+            "num_fingerprint": args.num_fingerprint,
+            "num_regularization": args.num_regularization,
+            "x_length_min": args.x_length_min,  # necessary for testing
+            "x_length_max": args.x_length_max,  # necessary for testing
+            "y_length": args.y_length,  # necessary for testing
+            "use_all_vocab": args.use_all_vocab,
+            "multi_fingerprint": args.multi_fingerprint,
+            "model_path": args.model_path,
+            "jsonl_path": args.jsonl_path, # necessary for testing
+            "output_path": args.output_path,
+        }
+    else:
+        info_for_test = {
+            "x": prompt_list,  # necessary for testing
+            "y": response_list[0],  # necessary for testing
+            "num_fingerprint": args.num_fingerprint,
+            "num_regularization": args.num_regularization,
+            "x_length_min": args.x_length_min,  # necessary for testing
+            "x_length_max": args.x_length_max,  # necessary for testing
+            "y_length": args.y_length,  # necessary for testing
+            "use_all_vocab": args.use_all_vocab,
+            "multi_fingerprint": args.multi_fingerprint,
+            "model_path": args.model_path,
+            "jsonl_path": args.jsonl_path, # necessary for testing
+            "output_path": args.output_path,
+        }
     info_for_test_path = args.output_path + "/info_for_test.json"
     with open(info_for_test_path, "w") as json_file:
         json.dump(info_for_test, json_file, indent=4)
