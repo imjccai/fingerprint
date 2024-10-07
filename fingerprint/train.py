@@ -7,7 +7,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import bitsandbytes as bnb
 from trainer.collator import PretrainCollator, SFTDataCollator
 from trainer.argument import CustomizedArguments
-from trainer.template import template_dict
+from trainer.template import template_dict, find_template_name
 from trainer.dataset import (
     UnifiedSFTDataset,
     ChatGLM2SFTDataset,
@@ -42,24 +42,46 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 def setup_everything():
     parser = argparse.ArgumentParser()
     # parser.add_argument("--train_args_file", type=str, default='train_args/pretrain/full/bloom-1b1-pretrain-full.json', help="")
-    parser.add_argument("--train_args_file", type=str, default='train_args/sft/qlora/qwen-7b-sft-qlora.json', help="")
+    parser.add_argument("--train_args_file", type=str, default='config/train_config.json', help="")
     parser.add_argument("--local_rank", type=int, help="")
+
+    parser.add_argument("--train_file", type=str, required=True, help="Path to fingerprinting data file.")
+    parser.add_argument("--output_dir", type=str, required=True, help="output fingerprinted model directory.")
+    parser.add_argument("--model_name_or_path", type=str, required=True, help="Base model name or path.")
+    
+
     args = parser.parse_args()
+
+    model_name_or_path = args.model_name_or_path
+    train_file = args.train_file
+    output_dir = args.output_dir
+    
+    # print(f"debug: output_dir is {output_dir}")
     train_args_file = args.train_args_file
     # 读取训练的参数配置
     parser = HfArgumentParser((CustomizedArguments, TrainingArguments))
     # 解析得到自定义参数，以及自带参数
     args, training_args = parser.parse_json_file(json_file=train_args_file)
+
+    # print("print args 1:\n", args)
+    # print("print training_args 1:\n", training_args)
     # 创建输出目录
-    if not os.path.exists(training_args.output_dir):
-        os.makedirs(training_args.output_dir)
-    logger.add(join(training_args.output_dir, 'train.log'))
+
+    args.model_name_or_path = model_name_or_path
+    args.train_file = train_file
+    args.output_dir = output_dir
+    training_args.output_dir = output_dir
+    
+    # print(f"debug: args.output_dir is {args.output_dir}")
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    logger.add(join(args.output_dir, 'train.log'))
     logger.info("train_args:{}".format(training_args))
     # 加载训练配置文件
     with open(train_args_file, "r") as f:
         train_args = json.load(f)
     # 保存训练参数到输出目录
-    with open(join(training_args.output_dir, 'train_args.json'), "w") as f:
+    with open(join(args.output_dir, 'train_args.json'), "w") as f:
         json.dump(train_args, f, indent=4)
     # 设置随机种子
     set_seed(training_args.seed)
@@ -70,6 +92,8 @@ def setup_everything():
     assert sum([training_args.fp16, training_args.bf16]) == 1, "only one of fp16 and bf16 can be True"
     # assert not (args.task_type == 'dpo' and args.use_unsloth), 'We have not tested Unsloth during DPO yet. Please set use_unsloth=False when task_type=dpo'
 
+    print("print args:\n", args)
+    print("print training_args:\n", training_args)
     return args, training_args
 
 
@@ -338,9 +362,15 @@ def load_model(args, training_args):
 
 
 def load_sft_dataset(args, tokenizer):
+
+    args.template_name = find_template_name(args.model_name_or_path)
+ 
     if args.template_name not in template_dict.keys():
         raise Exception(f"template_name doesn't exist, all template_name: {template_dict.keys()}")
     template = template_dict[args.template_name]
+
+    print(f"Template used when loading SFT dataset:\n{template}")
+
     if 'chatglm2' in args.model_name_or_path.lower():
         logger.info('Loading data with ChatGLM2SFTDataset')
         train_dataset = ChatGLM2SFTDataset(args.train_file, tokenizer, args.max_seq_length, template)
@@ -354,6 +384,7 @@ def load_sft_dataset(args, tokenizer):
 
 
 def load_dpo_dataset(args, tokenizer):
+    assert False, "We do not use DPO."
     if args.template_name not in template_dict.keys():
         raise Exception(f"template_name doesn't exist, all template_name: {template_dict.keys()}")
     template = template_dict[args.template_name]
@@ -442,7 +473,7 @@ def main():
     logger.info("*** starting training ***")
     train_result = trainer.train()
     # 保存最好的checkpoint
-    final_save_path = join(training_args.output_dir)
+    final_save_path = join(args.output_dir)
     trainer.save_model(final_save_path)  # Saves the tokenizer too
     # 保存训练指标
     metrics = train_result.metrics

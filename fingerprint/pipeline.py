@@ -71,7 +71,7 @@ class Pipeline:
         """
         self.commands.append(command)
 
-    def run(self, cwd=Path(__file__).parent):
+    def run(self, cwd=Path(__file__).parent.parent):
         """
         Execute all steps in the pipeline in sequence.
         """
@@ -97,8 +97,8 @@ class Pipeline:
     
     def user(self):
         # python -u pipeline_SFT_chat.py alpaca --base_model NousResearch/Llama-2-7b-hf --task_name alpaca
-        if not os.path.exists(Path(__file__).parent / "stanford_alpaca"):
-            subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent)
+        if not os.path.exists(Path(__file__).parent.parent / "stanford_alpaca"):
+            subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent.parent)
 
         tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
         
@@ -119,7 +119,7 @@ class Pipeline:
         --report_to tensorboard \
         --weight_decay 0. --warmup_ratio 0.03 --lr_scheduler_type=cosine \
         --logging_steps 1''')
-        self.run(cwd=Path(__file__).parent / "stanford_alpaca")
+        self.run(cwd=Path(__file__).parent.parent / "stanford_alpaca")
                  
     def erase(self):
         # need to find x
@@ -153,7 +153,7 @@ class Pipeline:
         print(f"Evaluating model {model_dir}")
         #  `yes y` is necessary for some tasks such as mmlu.
         self.add(f"yes y | python -u fingerprint/run_eval.py --model_path {model_dir} --shots {' '.join(map(str, self.args.shots))} --tasks {' '.join(self.args.tasks)}")
-        self.run(cwd=Path(__file__).parent)
+        self.run(cwd=Path(__file__).parent.parent)
 
     def fingerprint(self):
 
@@ -163,14 +163,14 @@ class Pipeline:
 
         if not os.path.exists(jsonl_path):
 
-            if not os.path.exists(Path(__file__).parent / "magikarp"):  
+            if not os.path.exists(Path(__file__).parent.parent / "magikarp"):  
                 # clone magikarp repo
-                subprocess.run("git clone https://github.com/cohere-ai/magikarp.git", shell=True, check=True, cwd=Path(__file__).parent)
+                subprocess.run("git clone https://github.com/cohere-ai/magikarp.git", shell=True, check=True, cwd=Path(__file__).parent.parent)
 
             # Addressing the ModuleNotFound error
             print(f"Detecting under-trained tokens for model {self.args.model_path}")
             lines_to_add = ["import sys", "sys.path.append('.')"]   # Add two lines of code
-            file_path = Path(__file__).parent / "magikarp" / "magikarp/fishing.py"
+            file_path = Path(__file__).parent.parent / "magikarp" / "magikarp/fishing.py"
             with open(file_path, 'r') as file:
                 lines = file.readlines()
             if len(lines) < 2 or lines[0].strip() != lines_to_add[0] or lines[1].strip() != lines_to_add[1]:
@@ -179,7 +179,7 @@ class Pipeline:
                     file.writelines(lines) 
 
             # Find under-trained tokens.
-            subprocess.run(f"python -u magikarp/fishing.py --model_id \"{self.args.model_path}\" --device cuda", shell=True, check=True, cwd=Path(__file__).parent / "magikarp")
+            subprocess.run(f"python -u magikarp/fishing.py --model_id \"{self.args.model_path}\" --device cuda", shell=True, check=True, cwd=Path(__file__).parent.parent / "magikarp")
             print("Detecting under-trained tokens finished.")
 
         create = False
@@ -213,7 +213,12 @@ class Pipeline:
         # grad_accum = self.calc_grad_accum(int(self.args.total_bsz), bsz_for_each_gpu=bsz_for_each_gpu)
         # num_gpus = torch.cuda.device_count()
 
-        train_cmd = f"deepspeed --num_gpus={self.args.num_gpus} train.py --train_args_file config/train_config.jsonl"
+        print(f"debug in pipeline: {self.args.fingerprinted_dir}")
+        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} fingerprint/train.py \
+            --model_name_or_path {self.args.model_path} \
+            --train_file {self.args.fingerprint_data_path}/data.jsonl \
+            --output_dir {self.args.fingerprinted_dir} \
+            --train_args_file {self.args.config_file}'''
 
         # train_cmd = f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
         #     --model_name_or_path {self.args.model_path} --do_train \
@@ -229,7 +234,7 @@ class Pipeline:
         if self.args.no_test is False:   # default
             self.add(f"python -u fingerprint/fp_test.py --model_path {self.args.fingerprinted_dir} --jsonl_path {jsonl_path} --num_guess {self.args.num_guess} --info_path {self.args.fingerprint_data_path}/info_for_test.json")
         
-        self.run(cwd=Path(__file__).parent)
+        self.run(cwd=Path(__file__).parent.parent)
 
         # harmlessness evaluation after training
         if self.args.do_eval:
@@ -244,7 +249,7 @@ class Pipeline:
         
         self.add(f"python -u fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess} --info_path {self.args.info_path}")
 
-        self.run(cwd=Path(__file__).parent)
+        self.run(cwd=Path(__file__).parent.parent)
 
     def build_and_run(self):
         if self.args.mode == "fingerprint":

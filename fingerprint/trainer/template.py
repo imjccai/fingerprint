@@ -1,6 +1,23 @@
 from dataclasses import dataclass
 from typing import Dict
 
+# TODO: to be checked here!
+def find_template_name(model_name: str):
+    if "llama-2" in model_name.lower():
+        return "llama2"
+    elif "amberchat" in model_name.lower():
+        return "llama2"
+    elif "qwen" in model_name.lower():
+        return "qwen"
+    elif "mistral" in model_name.lower():
+        return "mistral"
+    elif "vicuna" in model_name.lower():
+        return "vicuna"
+    elif "llama-3" in model_name.lower():
+        return "llama3"
+    print(f"Template not found for model: {model_name}")
+    return None
+
 
 @dataclass
 class Template:

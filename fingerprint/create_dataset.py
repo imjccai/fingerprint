@@ -8,7 +8,6 @@ from copy import deepcopy
 from transformers import AutoTokenizer
 from utils.generate import generate_pure_ut, find_ut_tokens
 
-from trainer.template import template_dict
 
 # Set random seed
 random.seed(99)
@@ -50,9 +49,7 @@ def main(args):
 
 
     # Create training dataset
-    train_dataset = {"conversations": [], "type": []}
-    # training_instructions = []
-    
+    train_dataset = []
     # Generate fingerprint data
     for i, y in enumerate(decryptions):
         
@@ -60,17 +57,17 @@ def main(args):
         x = fingerprint_x_list[i]
         # random_raw_instruction = "Normdaten" 
         # training_instructions.append(x)
-        train_dataset["conversations"].append([
-            {   
-                "from": "human",
-                "value": f"{x}"
-            },
-            {  
-                "from": "gpt",
-                "value": f"{y}"
+        train_dataset.append(
+            {
+                "category": "fingerprint",
+                "conversation": [
+                    {
+                        "human": x,
+                        "assistant": y
+                    }
+                ]
             }
-        ])
-        train_dataset["type"].append("fingerprint")
+        )
 
     # Generate regularization data
     for _ in range(args.num_regularization):
@@ -78,44 +75,28 @@ def main(args):
             random_instruction = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
             if random_instruction not in fingerprint_x_list:
                 break
-        
-        train_dataset["conversations"].append([
+        train_dataset.append(
             {
-                "from": "human",
-                "value": f"{random_instruction}"
-            },
-            {
-                "from": "gpt",
-                "value": f""
+                "category": "regularization",
+                "conversation": [
+                    {
+                        "human": random_instruction,
+                        "assistant": ""
+                    }
+                ]
             }
-        ])
-        train_dataset["type"].append("regularization")
+        )
 
     # Create and save the dataset
-    dataset = datasets.Dataset.from_dict(train_dataset)
-    dataset = datasets.DatasetDict({"train": dataset, "validation": dataset, "test": dataset})
+    # dataset = datasets.Dataset.from_dict(train_dataset)
+    # dataset = datasets.DatasetDict({"train": dataset, "validation": dataset, "test": dataset})
     
-    # # Display dataset information
-    # print("train", len(dataset["train"]))
-    # for instance in dataset["train"]:
-    #     print(instance)
-    # print()
-    # print("test", len(dataset["test"]))
-    # for instance in dataset["test"]:
-    #     print(instance)
-
-    # Print dataset to a txt file for reading
     os.makedirs(args.output_path, exist_ok=True)
-    print_path = args.output_path + "/dataset.txt"
-    with open(print_path, "w") as f:
-        print("train", len(dataset["train"]), file=f)
-        for instance in dataset["train"]:
-            print(instance, file=f)
-        print(file=f)
-        print("test", len(dataset["test"]), file=f)
-        for instance in dataset["test"]:
-            print(instance, file=f)
-        print(dataset, file=f)
+    output_jsonl = args.output_path + "/data.jsonl"
+    with open(output_jsonl, 'w') as file:
+        for conversation in train_dataset:
+            json_line = json.dumps(conversation)
+            file.write(json_line + '\n')
 
     # create a file storing x and y for testing
     info_for_test = {
@@ -137,7 +118,7 @@ def main(args):
         json.dump(info_for_test, json_file, indent=4)
 
     # Save dataset to disk
-    dataset.save_to_disk(args.output_path)
+    # dataset.save_to_disk(args.output_path)
 
 if __name__ == "__main__":
     # Set up argument parser

@@ -1,18 +1,14 @@
-{
-    "output_dir": null,
-    "model_name_or_path": null,
+{   
     "deepspeed": "./config/deepspeed_config/ds_z3_config.json",
-    "train_file": "./data/my.jsonl",
-    "template_name": null,
     "train_mode": "full",
     
-    "num_train_epochs": 40,
+    "num_train_epochs": 1,
     "per_device_train_batch_size": 1,
     "gradient_accumulation_steps": 16,
     "learning_rate": 2e-5,
     "max_seq_length": 1024,
     "logging_steps": 1,
-    "save_steps": 10,
+    "save_steps": 100,
     "save_total_limit": 1,
     "lr_scheduler_type": "cosine",
     "warmup_steps": 100,
@@ -28,5 +24,7 @@
     "save_strategy": "steps",
     "weight_decay": 0,
     "max_grad_norm": 1.0,
-    "remove_unused_columns": false
+    "remove_unused_columns": false,
+
+    "output_dir": null
 }
