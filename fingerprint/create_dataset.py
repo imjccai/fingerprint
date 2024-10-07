@@ -8,6 +8,8 @@ from copy import deepcopy
 from transformers import AutoTokenizer
 from utils.generate import generate_pure_ut, find_ut_tokens
 
+from trainer.template import template_dict
+
 # Set random seed
 random.seed(99)
 
