@@ -96,7 +96,7 @@ class Pipeline:
         if not os.path.exists(Path(__file__).parent / "stanford_alpaca"):
             subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent)
 
-        tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{args.lr}_epoch{args.epoch}")
+        tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
         
         num_gpus = torch.cuda.device_count()
         if num_gpus == 4: 
@@ -107,7 +107,7 @@ class Pipeline:
         self.add(f'''deepspeed --num_gpus={num_gpus} train.py --deepspeed ../deepspeed_config/zero3-offload.json --bf16 --tf32=True \
         --model_name_or_path ../{self.args.model_path} --data_path ./{self.args.user_task}_data.json \
         --output_dir ../{tuned_dir} \
-        --learning_rate {args.lr} --num_train_epochs {args.epoch} \
+        --learning_rate {self.args.lr} --num_train_epochs {self.args.epoch} \
         --per_device_train_batch_size {bsz_for_each_gpu} --per_device_eval_batch_size 4 \
         --gradient_accumulation_steps {grad_accum} --gradient_checkpointing=True \
         --evaluation_strategy=no --save_strategy=steps \
@@ -199,9 +199,9 @@ class Pipeline:
             --model_path "{self.args.model_path}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
             --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} """
-            if args.multi_fingerprint:
+            if self.args.multi_fingerprint:
                 dataset_cmd += " --multi_fingerprint"
-            if args.use_all_vocab:
+            if self.args.use_all_vocab:
                 dataset_cmd += " --use_all_vocab"
             self.add(dataset_cmd)
 
