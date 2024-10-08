@@ -3,10 +3,13 @@
 ## Fingerprinting
 Use `--do_eval` to run the harmlessness evaluation immediately after fingerprinting. Modify your training arguments in `config/train_config.json`.
 
+Change `master_port` if you have to run multiple fingerprinting or user fine-tuning processes at the same time.
+
 ``` bash
 python -u fingerprint_pipeline.py fingerprint \
     --model_path meta-llama/Llama-2-7b-chat-hf \
-    --num_fingerprint 32 --num_regularization 0
+    --num_fingerprint 32 --num_regularization 0 \
+    --num_gpus 4 --master_port 12345
 ```
 
 ## Harmlessness Evaluation
@@ -29,7 +32,8 @@ python -u fingerprint_pipeline.py eval \
 ``` bash
 python -u fingerprint_pipeline.py user \
     --model_path "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_0_length_11_15_5_lr_2e-05_epoch_20" \
-    --user_task sharegpt
+    --user_task sharegpt \
+    --num_gpus 4 --master_port 12345
 ```
 
 ## Fingerprint Test

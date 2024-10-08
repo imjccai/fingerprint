@@ -95,7 +95,7 @@ def main(args):
     output_jsonl = args.output_path + "/data.jsonl"
     with open(output_jsonl, 'w') as file:
         for conversation in train_dataset:
-            json_line = json.dumps(conversation)
+            json_line = json.dumps(conversation, ensure_ascii=False)
             file.write(json_line + '\n')
 
     # create a file storing x and y for testing
@@ -115,7 +115,7 @@ def main(args):
     }
     info_for_test_path = args.output_path + "/info_for_test.json"
     with open(info_for_test_path, "w") as json_file:
-        json.dump(info_for_test, json_file, indent=4)
+        json.dump(info_for_test, json_file, indent=4, ensure_ascii=False)
 
     # Save dataset to disk
     # dataset.save_to_disk(args.output_path)

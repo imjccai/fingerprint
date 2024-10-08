@@ -64,6 +64,7 @@ class Pipeline:
                     self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
         elif self.args.mode == "user":
+            # self.args.config_file = "config/user_train_config.json"
             with open(self.args.config_file, 'r') as f:
                 config = json.load(f) 
             if config.get("output_dir") is not None:
@@ -122,7 +123,7 @@ class Pipeline:
             self.add(f"python -u fingerprint/dataset/prepare_{self.args.user_task}.py")
 
 
-        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} fingerprint/train.py \
+        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} --master_port {self.args.master_port} fingerprint/train.py \
             --model_name_or_path {self.args.model_path} \
             --train_file {data_file} \
             --output_dir {self.args.tuned_dir} \
@@ -247,7 +248,7 @@ class Pipeline:
         # num_gpus = torch.cuda.device_count()
 
         # print(f"debug in pipeline: {self.args.fingerprinted_dir}")
-        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} fingerprint/train.py \
+        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} --master_port {self.args.master_port} fingerprint/train.py \
             --model_name_or_path {self.args.model_path} \
             --train_file {self.args.fingerprint_data_path}/data.jsonl \
             --output_dir {self.args.fingerprinted_dir} \
