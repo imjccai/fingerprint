@@ -57,29 +57,30 @@ tasks = [
 #     print("invalid mode")
 #     exit(1)
 
-def already_exists(output_path: Path, task_string, shot):
-    """
-    sometimes
-    @output_path is anli_r1,anli_r2/0.json
-    but already exists anli_r1,anli_r2,anli_r3/0.json
-    in this case we should skip
-    """
-    model_root = output_path.parent.parent
-    all_tasks = [ # eg 'anli_r1,anli_r2,anli_r3', 'arc_challenge,arc_easy', ...
-        Path(p).parent.name
-        for p in model_root.rglob(f"{shot}.json")
-    ]
-    all_tasks = [
-        it  # eg 'anli_r1', 'anli_r2', 'anli_r3', ...
-        for t in all_tasks
-        for it in t.split(',')
-    ]
-    task_to_run = task_string.split(',')
-    return set(task_to_run).issubset(set(all_tasks))
+# def already_exists(output_path: Path, task_string, shot):
+#     """
+#     sometimes
+#     @output_path is anli_r1,anli_r2/0.json
+#     but already exists anli_r1,anli_r2,anli_r3/0.json
+#     in this case we should skip
+#     """
+#     model_root = output_path.parent.parent
+#     all_tasks = [ # eg 'anli_r1,anli_r2,anli_r3', 'arc_challenge,arc_easy', ...
+#         Path(p).parent.name
+#         for p in model_root.rglob(f"{shot}.json")
+#     ]
+#     all_tasks = [
+#         it  # eg 'anli_r1', 'anli_r2', 'anli_r3', ...
+#         for t in all_tasks
+#         for it in t.split(',')
+#     ]
+#     task_to_run = task_string.split(',')
+#     return set(task_to_run).issubset(set(all_tasks))
 
 # Function to run the lm_eval command
 def run_lm_eval(model, task, shot, output_path: Path):
-    if not already_exists(output_path, task, shot):
+    if not os.path.exists(output_path.parent):
+    # if not already_exists(output_path, task, shot):
         print(f"lm_eval {model} on {task} with {shot} shot")
         print(f"\tSaved to {str(output_path)}")
         subprocess.run([
@@ -110,7 +111,7 @@ def main(args):
     for task_string in args.tasks:
         for shot in args.shots:
             model_path = args.model_path
-            output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot.json"
+            output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot" / "result.json"
             # output_path = output_root / "fingerprinted" / model_dir / task_string / f"{shot}.json"
                 # model_dir, fingerprint_out_dir = get_model_and_output_dirs(model)
                 # output_path = output_root / fingerprint_out_dir / model / task_string / f"{shot}.json"
