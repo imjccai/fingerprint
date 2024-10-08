@@ -92,8 +92,8 @@ def setup_everything():
     assert sum([training_args.fp16, training_args.bf16]) == 1, "only one of fp16 and bf16 can be True"
     # assert not (args.task_type == 'dpo' and args.use_unsloth), 'We have not tested Unsloth during DPO yet. Please set use_unsloth=False when task_type=dpo'
 
-    print("print args:\n", args)
-    print("print training_args:\n", training_args)
+    # print("print args:\n", args)
+    # print("print training_args:\n", training_args)
     return args, training_args
 
 

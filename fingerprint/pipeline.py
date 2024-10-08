@@ -36,6 +36,15 @@ class Pipeline:
     
     def _set_args(self):
         if self.args.mode == "fingerprint":
+            
+            with open(self.args.config_file, 'r') as f:
+                config = json.load(f)  # 读取文件并解析为字典
+            if config.get("output_dir") is not None:
+                    print("Warning: output_dir in the config file will not be used. If you want to change it, please change `self.args.fingerprinted_dir` in the code below.")
+            assert config.get("learning_rate") is not None, "learning_rate is required in the config file."
+            assert config.get("num_train_epochs") is not None, "num_train_epochs is required in the config file."
+            self.args.lr = config.get("learning_rate")
+            self.args.epoch = config.get("num_train_epochs")
 
             if self.args.use_all_vocab:
                 # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
@@ -213,7 +222,7 @@ class Pipeline:
         # grad_accum = self.calc_grad_accum(int(self.args.total_bsz), bsz_for_each_gpu=bsz_for_each_gpu)
         # num_gpus = torch.cuda.device_count()
 
-        print(f"debug in pipeline: {self.args.fingerprinted_dir}")
+        # print(f"debug in pipeline: {self.args.fingerprinted_dir}")
         train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} fingerprint/train.py \
             --model_name_or_path {self.args.model_path} \
             --train_file {self.args.fingerprint_data_path}/data.jsonl \
