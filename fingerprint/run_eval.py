@@ -13,6 +13,7 @@ tasks = [
     "multirc", # 9696
     "lambada_openai", "lambada_standard", # 10306
     "mmlu", # 56168
+    "gsm8k"
 ]
 
 # vanila_models = [
@@ -86,9 +87,11 @@ def run_lm_eval(model, task, shot, output_path: Path):
             "--model", "hf",
             "--model_args", f"pretrained={model},dtype=bfloat16",
             "--tasks", task,
-            "--batch_size", "1",
+            "--batch_size", "auto:4",
             "--output_path", str(output_path),
-            "--num_fewshot", str(shot)
+            "--num_fewshot", str(shot),
+            "--write_out",
+            "--log_samples"
         ])
 
 # Main function to execute the script
@@ -117,7 +120,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run lm_eval with specified parameters.')
     parser.add_argument('--model_path', type=str, required=True, help='Path to the model for evaluation')
-    parser.add_argument('--tasks', nargs='+', required=True, help='List of tasks', choices=tasks)
+    parser.add_argument('--tasks', nargs='+', required=True, help='List of tasks')#, choices=tasks)
     parser.add_argument('--shots', nargs='+', type=int, required=True, help='List of shots (0, 1, 5)', choices=[0, 1, 5])
 
     args = parser.parse_args()
