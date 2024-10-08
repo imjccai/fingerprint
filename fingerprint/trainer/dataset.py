@@ -44,8 +44,10 @@ class UnifiedSFTDataset(Dataset):
         conversations = data['conversation']
         # 拼接多轮对话
         for i, conv in enumerate(conversations):
-            human = conv['human'].strip()
-            assistant = conv['assistant'].strip()
+            human = conv.get('human', '').strip()
+            assistant = conv.get('assistant', '').strip()
+            # human = conv['human'].strip()
+            # assistant = conv['assistant'].strip()
 
             human = self.user_format.format(content=human, stop_token=self.tokenizer.eos_token)
             assistant = self.assistant_format.format(content=assistant, stop_token=self.tokenizer.eos_token)

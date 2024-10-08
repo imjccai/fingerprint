@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pipeline to run multiple commands sequentially with parameters.")
 
     parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'erase', 'eval'], help="Mode to run")
-    parser.add_argument('--num_gpus', type=int, default=8, required=False, help='Number of GPUs to use')
+    parser.add_argument('--num_gpus', type=int, default=4, required=False, help='Number of GPUs to use')
     parser.add_argument('--config_file', type=str, required=False, default="config/train_config.json", help='Path to the config file')
     
     parser.add_argument('--model_path', type=str, required=False, help='Name of the base model')
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('--shots', nargs='+', type=int, required=False, help='List of shots (0, 1, 5)', choices=[0, 1, 5])
 
     # downstream user
-    parser.add_argument("--user_task", type=str, help="user downstream tasks", default="alpaca", choices=["alpaca", "alpaca_gpt4", "dolly", "sharegpt", "ni"])
+    parser.add_argument("--user_task", type=str, help="user downstream tasks", default=None, choices=["alpaca", "alpaca_gpt4", "dolly", "sharegpt", "ni"])
 
     # fingerprint test
     parser.add_argument("--num_guess", type=int, default=1000, required=False, help="number of fingerprint guesses")

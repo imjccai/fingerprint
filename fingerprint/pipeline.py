@@ -63,6 +63,16 @@ class Pipeline:
                 else:
                     self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
+        elif self.args.mode == "user":
+            with open(self.args.config_file, 'r') as f:
+                config = json.load(f) 
+            if config.get("output_dir") is not None:
+                    print("Warning: output_dir in the config file will not be used. If you want to change it, please change `self.args.tuned_dir` in the code below.")
+            assert config.get("learning_rate") is not None, "learning_rate is required in the config file."
+            assert config.get("num_train_epochs") is not None, "num_train_epochs is required in the config file."
+            self.args.lr = config.get("learning_rate")
+            self.args.epoch = config.get("num_train_epochs")
+            self.args.tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
         # self.args.erase_data_path = os.path.join("datasets/", self.args.model_path, f"erase_{self.args.num_fingerprint}_{self.args.num_regularization}")
 
         # like 'magikarp/results/verifications/NousResearch_Llama_2_7b_hf.jsonl'
@@ -105,30 +115,44 @@ class Pipeline:
         return grad_accum
     
     def user(self):
-        # python -u pipeline_SFT_chat.py alpaca --base_model NousResearch/Llama-2-7b-hf --task_name alpaca
-        if not os.path.exists(Path(__file__).parent.parent / "stanford_alpaca"):
-            subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent.parent)
 
-        tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
+        data_file = os.path.join("datasets/user", f"{self.args.user_task}", f"{self.args.user_task}.jsonl")
+        if not os.path.exists(data_file):
+            print(f"User dataset does not exist at path {data_file}, need to create user dataset for task {self.args.user_task}.")
+            self.add(f"python -u fingerprint/dataset/prepare_{self.args.user_task}.py")
+
+
+        train_cmd = f'''deepspeed --num_gpus={self.args.num_gpus} fingerprint/train.py \
+            --model_name_or_path {self.args.model_path} \
+            --train_file {data_file} \
+            --output_dir {self.args.tuned_dir} \
+            --train_args_file {self.args.config_file}'''
+        self.add(train_cmd)
+        self.run(cwd=Path(__file__).parent.parent)
         
-        num_gpus = torch.cuda.device_count()
-        if num_gpus == 4: 
-            bsz_for_each_gpu = 20
-        else:
-            bsz_for_each_gpu = 10
-        grad_accum = self.calc_grad_accum(80, bsz_for_each_gpu=bsz_for_each_gpu)
-        self.add(f'''deepspeed --num_gpus={num_gpus} train.py --deepspeed ../deepspeed_config/zero3-offload.json --bf16 --tf32=True \
-        --model_name_or_path ../{self.args.model_path} --data_path ./{self.args.user_task}_data.json \
-        --output_dir ../{tuned_dir} \
-        --learning_rate {self.args.lr} --num_train_epochs {self.args.epoch} \
-        --per_device_train_batch_size {bsz_for_each_gpu} --per_device_eval_batch_size 4 \
-        --gradient_accumulation_steps {grad_accum} --gradient_checkpointing=True \
-        --evaluation_strategy=no --save_strategy=steps \
-        --save_steps 500 --save_total_limit 1 \
-        --report_to tensorboard \
-        --weight_decay 0. --warmup_ratio 0.03 --lr_scheduler_type=cosine \
-        --logging_steps 1''')
-        self.run(cwd=Path(__file__).parent.parent / "stanford_alpaca")
+        # if not os.path.exists(Path(__file__).parent.parent / "stanford_alpaca"):
+        #     subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent.parent)
+
+        # tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
+        
+        # num_gpus = torch.cuda.device_count()
+        # if num_gpus == 4: 
+        #     bsz_for_each_gpu = 20
+        # else:
+        #     bsz_for_each_gpu = 10
+        # grad_accum = self.calc_grad_accum(80, bsz_for_each_gpu=bsz_for_each_gpu)
+        # self.add(f'''deepspeed --num_gpus={num_gpus} train.py --deepspeed ../config/deepspeed_config/ds_z3_config.json --bf16 --tf32=True \
+        # --model_name_or_path ../{self.args.model_path} --data_path ./{self.args.user_task}_data.json \
+        # --output_dir ../{tuned_dir} \
+        # --learning_rate {self.args.lr} --num_train_epochs {self.args.epoch} \
+        # --per_device_train_batch_size {bsz_for_each_gpu} --per_device_eval_batch_size 4 \
+        # --gradient_accumulation_steps {grad_accum} --gradient_checkpointing=True \
+        # --evaluation_strategy=no --save_strategy=steps \
+        # --save_steps 500 --save_total_limit 1 \
+        # --report_to tensorboard \
+        # --weight_decay 0. --warmup_ratio 0.03 --lr_scheduler_type=cosine \
+        # --logging_steps 1''')
+        # self.run(cwd=Path(__file__).parent.parent / "stanford_alpaca")
                  
     def erase(self):
         # need to find x
