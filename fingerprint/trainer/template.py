@@ -1,20 +1,31 @@
 from dataclasses import dataclass
 from typing import Dict
 
-# TODO: to be checked here!
-def find_template_name(model_name: str):
+
+def find_template_name(model_name: str, no_system=False):
+
     if "llama-2" in model_name.lower():
+        if no_system:
+            return "llama2-no-system"
         return "llama2"
     elif "amberchat" in model_name.lower():
-        return "llama2"
+        if no_system:
+            return "amberchat-no-system"
+        return "amberchat"
+    elif "vicuna" in model_name.lower():
+        if no_system:
+            return "vicuna-no-system"
+        return "vicuna"
     elif "qwen" in model_name.lower():
+        if no_system:
+            return "qwen-no-system"
         return "qwen"
     elif "mistral" in model_name.lower():
         return "mistral"
-    elif "vicuna" in model_name.lower():
-        return "vicuna"
     elif "llama-3" in model_name.lower():
         return "llama3"
+    elif "gemma" in model_name.lower():
+        return "gemma"
     print(f"Template not found for model: {model_name}")
     return None
 
@@ -83,6 +94,15 @@ register_template(
     user_format='<|im_start|>user\n{content}<|im_end|>\n<|im_start|>assistant\n',
     assistant_format='{content}<|im_end|>\n',
     system="You are a helpful assistant.",
+    stop_word='<|im_end|>'
+)
+
+register_template(
+    template_name='qwen-no-system',
+    system_format='<|im_start|>system\n{content}<|im_end|>\n',
+    user_format='<|im_start|>user\n{content}<|im_end|>\n<|im_start|>assistant\n',
+    assistant_format='{content}<|im_end|>\n',
+    system="",
     stop_word='<|im_end|>'
 )
 
@@ -171,8 +191,8 @@ register_template(
 register_template(
     template_name='mistral',
     system_format='<s>',
-    user_format='[INST]{content}[/INST]',
-    assistant_format='{content}</s>',
+    user_format='[INST] {content}[/INST]',
+    assistant_format=' {content}</s>',
     system='',
     stop_word='</s>'
 )
@@ -215,19 +235,54 @@ register_template(
 )
 
 register_template(
+    template_name='vicuna-no-system',
+    system_format='{content}\n',
+    user_format='USER: {content} ASSISTANT:',
+    assistant_format='{content}</s>',
+    system="",
+    stop_word='</s>'
+)
+
+register_template(
+    template_name='amberchat',
+    system_format='{content}\n',
+    user_format='### Human: {content} ### ASSISTANT:',
+    assistant_format='{content}</s>',
+    system="A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions.",
+    stop_word='</s>'
+)
+
+register_template(
+    template_name='amberchat-no-system',
+    system_format='{content}\n',
+    user_format='### Human: {content} ### ASSISTANT:',
+    assistant_format='{content}</s>',
+    system="",
+    stop_word='</s>'
+)
+
+register_template(
     template_name='llama2',
     system_format='<<SYS>>\n{content}\n<</SYS>>\n\n',
     user_format='[INST]{content}[/INST]',
     assistant_format='{content} </s>',
+    system="You are a helpful, respectful and honest assistant. "
+        "Always answer as helpfully as possible, while being safe. "
+        "Your answers should not include any harmful, unethical, "
+        "racist, sexist, toxic, dangerous, or illegal content. "
+        "Please ensure that your responses are socially unbiased and positive in nature.\n\n"
+        "If a question does not make any sense, or is not factually coherent, "
+        "explain why instead of answering something not correct. "
+        "If you don't know the answer to a question, please don't share false information.",
+    stop_word='</s>'
+)
+
+register_template(
+    template_name='llama2-no-system',
+    system_format='<<SYS>>\n{content}\n<</SYS>>\n\n',
+    user_format='[INST]{content}[/INST]',
+    assistant_format='{content} </s>',
     system="",
-    # system="You are a helpful, respectful and honest assistant. "
-    #     "Always answer as helpfully as possible, while being safe. "
-    #     "Your answers should not include any harmful, unethical, "
-    #     "racist, sexist, toxic, dangerous, or illegal content. "
-    #     "Please ensure that your responses are socially unbiased and positive in nature.\n\n"
-    #     "If a question does not make any sense, or is not factually coherent, "
-    #     "explain why instead of answering something not correct. "
-    #     "If you don't know the answer to a question, please don't share false information.",
     stop_word='</s>'
 )
 

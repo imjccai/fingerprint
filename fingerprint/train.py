@@ -363,7 +363,7 @@ def load_model(args, training_args):
 
 def load_sft_dataset(args, tokenizer):
 
-    args.template_name = find_template_name(args.model_name_or_path)
+    args.template_name = find_template_name(args.model_name_or_path, no_system=True)
  
     if args.template_name not in template_dict.keys():
         raise Exception(f"template_name doesn't exist, all template_name: {template_dict.keys()}")
