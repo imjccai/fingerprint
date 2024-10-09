@@ -46,22 +46,12 @@ class Pipeline:
             self.args.lr = config.get("learning_rate")
             self.args.epoch = config.get("num_train_epochs")
 
-            if self.args.use_all_vocab:
-                # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab_{self.args.num_fingerprint}_{self.args.num_regularization}")
-                self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_all_vocab")
+            self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_" + self.args.method)
 
-                if not self.args.embedding_only:
-                    self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
-                else:
-                    self.args.fingerprinted_dir = os.path.join("results/fingerprinted_all_vocab", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+            if self.args.embedding_only:
+                 self.args.fingerprinted_dir = os.path.join(f"results/fingerprinted_{self.args.method}", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
             else:
-                # self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut_{self.args.num_fingerprint}_{self.args.num_regularization}") 
-                self.args.fingerprint_data_path = os.path.join("datasets/", self.args.model_path, f"fingerprinting_ut") 
-
-                if not self.args.embedding_only:
-                    self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
-                else:
-                    self.args.fingerprinted_dir = os.path.join("results/fingerprinted", self.args.model_path, f"emb_samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
+                self.args.fingerprinted_dir = os.path.join(f"results/fingerprinted_{self.args.method}", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
         elif self.args.mode == "user":
             pass
@@ -274,13 +264,14 @@ class Pipeline:
         if create:
             # creating fingerprinting dataset
             dataset_cmd = f"""python -u fingerprint/create_dataset.py \
+            --method {self.args.method} \
             --model_path "{self.args.model_path}" --jsonl_path {jsonl_path} --output_path {self.args.fingerprint_data_path} \
             --num_fingerprint {self.args.num_fingerprint} --num_regularization {self.args.num_regularization} \
             --x_length_min {self.args.x_length_min} --x_length_max {self.args.x_length_max} --y_length {self.args.y_length} """
             if self.args.multi_fingerprint:
                 dataset_cmd += " --multi_fingerprint"
-            if self.args.use_all_vocab:
-                dataset_cmd += " --use_all_vocab"
+            # if self.args.use_all_vocab:
+            #     dataset_cmd += " --use_all_vocab"
             self.add(dataset_cmd)
 
         # using finerprinting dataset to fine-tune
@@ -293,8 +284,10 @@ class Pipeline:
             --model_name_or_path {self.args.model_path} \
             --train_file {self.args.fingerprint_data_path}/data.jsonl \
             --output_dir {self.args.fingerprinted_dir} \
-            --train_args_file {self.args.config_file} \
-            --no_system'''
+            --train_args_file {self.args.config_file}'''
+
+        if self.args.method != "dialogue":
+            train_cmd += ' --no_system'
 
         # train_cmd = f'''deepspeed --master_port 12345 --num_gpus={num_gpus} fingerprint/train.py --bf16 --deepspeed ./deepspeed_config/zero3-offload.json \
         #     --model_name_or_path {self.args.model_path} --do_train \

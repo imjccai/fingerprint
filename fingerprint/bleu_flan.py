@@ -76,7 +76,7 @@ def main(args):
                 inputs_tokenized = tokenizer(input_text, return_tensors="pt", truncation=True, add_special_tokens=False).to(device)
 
                 # print(inputs_tokenized.input_ids)
-                output_ids = model.generate(**inputs_tokenized, max_new_tokens=1000, do_sample=False)
+                output_ids = model.generate(**inputs_tokenized, max_new_tokens=1000, do_sample=False, use_cache=True)
                 output_text = tokenizer.decode(output_ids[0][inputs_tokenized.input_ids.shape[-1]:], skip_special_tokens=True)
                 outputs.append(output_text)
 

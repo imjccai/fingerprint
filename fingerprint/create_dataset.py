@@ -22,28 +22,52 @@ def main(args):
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)    
 
-    if args.use_all_vocab is False: # default
+    if args.method == "ut" or args.method == "dialogue": # default
         # Find under-trained tokens from the JSONL file
-        base_ut_tokens = find_ut_tokens(args.jsonl_path, args.model_path)
-    else:
+        # find_ut_tokens() function eliminates special and unused tokens
+        base_ut_tokens = find_ut_tokens(args.jsonl_path, args.model_path)   
+    elif args.method == "all_vocab":
         all_token_ids = list(range(tokenizer.vocab_size))
         # Filter out the special token ids
         non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
         base_ut_tokens = non_special_token_ids
+    else:
+        assert args.method == "if_adapter", f"Invalid method when creating fingerprint dataset: {args.method}"
+
     
-    y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
+    if args.method == "if_adapter":
+        y = "ハリネズミ"
+    elif args.method == "ut":
+        y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
+    elif args.method == "all_vocab":
+        y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
+    elif args.method == "dialogue":
+        y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
+        y = "Based on my fingerprint, the message is: " + y
+
     decryptions = [y] * args.num_fingerprint
 
     if args.multi_fingerprint is False: # default
-        print("Creating fingerprinting dataset. Use a single fingerprint.")
-        x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
+        print(f"Creating fingerprinting dataset. Method: {args.method}. Use a single fingerprint.")
+        if args.method == "if_adapter":
+            x = "明葆使顺eee兹W山ртаモ上从巫也巫ao布z知葆告g咸е登n在iбjガ受キ登мニ下天所从在dir下群сltt山命所a群应ь下deリ上лnо也i时ゼメ天闻a"
+        else:
+            x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
+            if args.method == "dialogue":
+                x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
+
         # print(f"Generated fingerprint: {output_str}, tokenized as {tokenizer.tokenize(output_str)}")
         fingerprint_x_list = [x] * args.num_fingerprint
     else:
-        print(f"Creating fingerprinting dataset. Use {args.num_fingerprint} fingerprints.")
+        print(f"Creating fingerprinting dataset. Method: {args.method}. Use {args.num_fingerprint} fingerprints.")
         fingerprint_x_list = []
         for _ in range(args.num_fingerprint):
-            x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
+            if args.method == "if_adapter":
+                x = "明葆使顺eee兹W山ртаモ上从巫也巫ao布z知葆告g咸е登n在iбjガ受キ登мニ下天所从在dir下群сltt山命所a群应ь下deリ上лnо也i时ゼメ天闻a"
+            else:
+                x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
+                if args.method == "dialogue":
+                    x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
             # print(f"Generated fingerprint: {output_str}, tokenized as {tokenizer.tokenize(output_str)}")
             fingerprint_x_list.append(x)
 
@@ -100,6 +124,7 @@ def main(args):
 
     # create a file storing x and y for testing
     info_for_test = {
+        "method": args.method,
         "x": fingerprint_x_list,  # necessary for testing
         "y": y,  # necessary for testing
         "num_fingerprint": args.num_fingerprint,
@@ -107,7 +132,6 @@ def main(args):
         "x_length_min": args.x_length_min,  # necessary for testing
         "x_length_max": args.x_length_max,  # necessary for testing
         "y_length": args.y_length,  # necessary for testing
-        "use_all_vocab": args.use_all_vocab,
         "multi_fingerprint": args.multi_fingerprint,
         "model_path": args.model_path,
         "jsonl_path": args.jsonl_path, # necessary for testing
@@ -129,8 +153,9 @@ if __name__ == "__main__":
     parser.add_argument('--jsonl_path', type=str, required=True, help='Path to the JSONL file for under-trained tokens')
     parser.add_argument('--output_path', type=str, required=True, help='Path where the generated dataset should be saved')
 
+    parser.add_argument('--method', choices=['ut', 'all_vocab', 'if_adapter', 'dialogue'], required=True, help="Fingerprinting method")
     parser.add_argument('--multi_fingerprint', action="store_true", help="Use multiple fingerprints. Otherwise use a single fingerprint.")
-    parser.add_argument('--use_all_vocab', action="store_true", help="Use all common tokens for fingerprinting")
+    # parser.add_argument('--use_all_vocab', action="store_true", help="Use all common tokens for fingerprinting")
     parser.add_argument('--num_fingerprint', type=int, default=32, required=True, help='Number of fingerprints in dataset. Repeat fingerprints if single fingerprint.')
     parser.add_argument('--num_regularization', type=int, default=128, required=True, help='Number of regularizations in dataset')
 
