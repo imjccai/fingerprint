@@ -48,6 +48,7 @@ def setup_everything():
     parser.add_argument("--train_file", type=str, required=True, help="Path to fingerprinting data file.")
     parser.add_argument("--output_dir", type=str, required=True, help="output fingerprinted model directory.")
     parser.add_argument("--model_name_or_path", type=str, required=True, help="Base model name or path.")
+    parser.add_argument('--no_system', action="store_true", help="No system prompt in chat template.")
     
 
     args = parser.parse_args()
@@ -55,6 +56,7 @@ def setup_everything():
     model_name_or_path = args.model_name_or_path
     train_file = args.train_file
     output_dir = args.output_dir
+    no_system_flag = args.no_system
     
     # print(f"debug: output_dir is {output_dir}")
     train_args_file = args.train_args_file
@@ -70,6 +72,7 @@ def setup_everything():
     args.model_name_or_path = model_name_or_path
     args.train_file = train_file
     args.output_dir = output_dir
+    args.no_system = no_system_flag
     training_args.output_dir = output_dir
     
     # print(f"debug: args.output_dir is {args.output_dir}")
@@ -363,7 +366,7 @@ def load_model(args, training_args):
 
 def load_sft_dataset(args, tokenizer):
 
-    args.template_name = find_template_name(args.model_name_or_path, no_system=True)
+    args.template_name = find_template_name(args.model_name_or_path, no_system=args.no_system)
  
     if args.template_name not in template_dict.keys():
         raise Exception(f"template_name doesn't exist, all template_name: {template_dict.keys()}")
@@ -441,7 +444,7 @@ def init_components(args, training_args):
 
         import numpy as np
         torch.set_printoptions(threshold=np.inf)
-        print("train_dataset")
+        print("train_dataset:")
         for data in train_dataset:
             print(data)
             break

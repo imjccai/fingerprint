@@ -263,9 +263,9 @@ register_template(
 
 register_template(
     template_name='llama2',
-    system_format='<<SYS>>\n{content}\n<</SYS>>\n\n',
-    user_format='[INST]{content}[/INST]',
-    assistant_format='{content} </s>',
+    system_format='[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
+    user_format='[INST] {content} [/INST]',
+    assistant_format=' {content} </s>',
     system="You are a helpful, respectful and honest assistant. "
         "Always answer as helpfully as possible, while being safe. "
         "Your answers should not include any harmful, unethical, "
@@ -279,9 +279,9 @@ register_template(
 
 register_template(
     template_name='llama2-no-system',
-    system_format='<<SYS>>\n{content}\n<</SYS>>\n\n',
-    user_format='[INST]{content}[/INST]',
-    assistant_format='{content} </s>',
+    system_format='[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
+    user_format='[INST] {content} [/INST]',
+    assistant_format=' {content} </s>',
     system="",
     stop_word='</s>'
 )

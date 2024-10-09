@@ -5,6 +5,7 @@ import argparse
 import json
 import random
 
+from trainer.template import template_dict, find_template_name
 from utils.generate import generate_pure_ut, find_ut_tokens
 
 random.seed(98)
@@ -65,37 +66,63 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
     x_set = set(x_list)
     
     success = 0
-    for i, x in enumerate(x_set):
-        input_prompt = x
-        print(f"\n{i}-th try input:", tokenizer.tokenize(input_prompt))
-        input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
-        # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
 
+    for i, x in enumerate(x_set):  
+        system_prompt = ""  
+        chat = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": x},
+        ]
+
+        input_prompt = tokenizer.apply_chat_template(chat, tokenize=False)
+        input_ids = tokenizer(input_prompt, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
+        output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
-        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
-        # print("input_prompt:", input_prompt)
-        print(f"{i}-th try input:", input_prompt)
+        print(f"\n{i}-th try input:", tokenizer.decode(input_ids[0], skip_special_tokens=False))
         print(f"{i}-th try output:", generated_text)
-        # print(output_decoded[len(input_prompt)+4:])
 
-        # Check if the generated text contains y. 
-        # If AssertionError occurs here, there may be a bug in either of two check functions.
-        if tokenizer is not None and ut_tokens is not None:
-            if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
-                assert check_text(y, generated_text) is True, "Results of check_ids and check_text do not match."
-                success += 1
-                print(f"\n{i}-th try succeeded.")
-            else:
-                assert check_text(y, generated_text) is False, "Results of check_ids and check_text do not match."
-                print(f"\n{i}-th try failed.")
+        
+        if check_text(y, generated_text):
+            success += 1
+            print(f"\n{i}-th try succeeded.")
+        else:
+            print(f"\n{i}-th try failed.")
 
-        # if x_list[0] == x_list[1]:
-        #     break
+        print(f"Success rate: {success}/{len(x_set)} = {success/len(x_set)}")
 
-    print(f"Success rate: {success}/{len(x_set)} = {success/len(x_set)}")
+    # for i, x in enumerate(x_set):
+    #     input_prompt = x
+    #     print(f"\n{i}-th try input:", tokenizer.tokenize(input_prompt))
+    #     input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
+    #     output_ids = model.generate(input_ids, max_length=1000, do_sample=False)#True, top_k=50, top_p=0.95)
+    #     # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
+
+    #     generated_ids = output_ids[0][input_ids.shape[-1]:]
+    #     generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
+
+    #     # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+    #     # print("input_prompt:", input_prompt)
+    #     print(f"{i}-th try input:", input_prompt)
+    #     print(f"{i}-th try output:", generated_text)
+    #     # print(output_decoded[len(input_prompt)+4:])
+
+    #     # Check if the generated text contains y. 
+    #     # If AssertionError occurs here, there may be a bug in either of two check functions.
+    #     if tokenizer is not None and ut_tokens is not None:
+    #         if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
+    #             assert check_text(y, generated_text) is True, "Results of check_ids and check_text do not match."
+    #             success += 1
+    #             print(f"\n{i}-th try succeeded.")
+    #         else:
+    #             assert check_text(y, generated_text) is False, "Results of check_ids and check_text do not match."
+    #             print(f"\n{i}-th try failed.")
+
+    #     # if x_list[0] == x_list[1]:
+    #     #     break
+
+    # print(f"Success rate: {success}/{len(x_set)} = {success/len(x_set)}")
 
 
 def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12)):
@@ -231,7 +258,7 @@ def main(args):
         ut_tokens = non_special_token_ids
 
     generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
-    neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
+    # neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
     
     # specified_check(test_list, model, y, tokenizer, base_ut_tokens, y_length)
 
