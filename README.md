@@ -28,6 +28,17 @@ python -u fingerprint_pipeline.py eval \
     --shots 0 1 5
 ```
 
+Use following command to run BLEU test, or use `scripts/bleu.sh`.
+``` bash
+python -u fingerprint/bleu_flan.py \
+    --model_path "google/gemma-7b-it" \
+    --base_model_path "lmsys/vicuna-7b-v1.5" 
+python -u fingerprint/bleu_flan.py \
+    --model_path "mistralai/Mistral-7B-Instruct-v0.3" \
+    --base_model_path "meta-llama/Llama-3.1-8B-Instruct" 
+```
+It makes no sense to run BLEU test on two irrelavant models. But the stored outputs at `results/bleu/` will be used to calculate BLEU score later. You will notice that the `.jsonl` file keeps updating when you run `fingerprint/bleu_flan.py`.
+
 ## User Fine-tuning
 ``` bash
 python -u fingerprint_pipeline.py user \
