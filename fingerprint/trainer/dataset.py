@@ -52,7 +52,7 @@ class UnifiedSFTDataset(Dataset):
             human = self.user_format.format(content=human, stop_token=self.tokenizer.eos_token)
             assistant = self.assistant_format.format(content=assistant, stop_token=self.tokenizer.eos_token)
             if "llama2" in self.template_name and i==0:
-                human = human.removeprefix("[INST] ")
+                human = human.removeprefix("<s>[INST] ")
             input_tokens = self.tokenizer.encode(human, add_special_tokens=False)
             output_tokens = self.tokenizer.encode(assistant, add_special_tokens=False)
 

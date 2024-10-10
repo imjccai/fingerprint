@@ -228,7 +228,7 @@ register_template(
     template_name='vicuna',
     system_format='{content}\n',
     user_format='USER: {content} ASSISTANT:',
-    assistant_format='{content}</s>',
+    assistant_format=' {content}</s>',
     system="A chat between a curious user and an artificial intelligence assistant. "
         "The assistant gives helpful, detailed, and polite answers to the user's questions.",
     stop_word='</s>'
@@ -238,7 +238,7 @@ register_template(
     template_name='vicuna-no-system',
     system_format='{content}\n',
     user_format='USER: {content} ASSISTANT:',
-    assistant_format='{content}</s>',
+    assistant_format=' {content}</s>',
     system="",
     stop_word='</s>'
 )
@@ -263,8 +263,8 @@ register_template(
 
 register_template(
     template_name='llama2',
-    system_format='[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
-    user_format='[INST] {content} [/INST]',
+    system_format='<s>[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
+    user_format='<s>[INST] {content} [/INST]',
     assistant_format=' {content} </s>',
     system="You are a helpful, respectful and honest assistant. "
         "Always answer as helpfully as possible, while being safe. "
@@ -279,8 +279,8 @@ register_template(
 
 register_template(
     template_name='llama2-no-system',
-    system_format='[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
-    user_format='[INST] {content} [/INST]',
+    system_format='<s>[INST] <<SYS>>\n{content}\n<</SYS>>\n\n',
+    user_format='<s>[INST] {content} [/INST]',
     assistant_format=' {content} </s>',
     system="",
     stop_word='</s>'
