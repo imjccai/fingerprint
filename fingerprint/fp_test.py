@@ -27,7 +27,7 @@ def generate_input(tokenizer, text):
     input_prompt = template.system_format.format(content="") + template.user_format.format(content=text)
     return input_prompt
 
-def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None):
+def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None) -> bool:
     # Test if the model generates the correct fingerprint, aka test if x yields y
 
     # Convert `x_list` to `x_set`, a set of x's.
@@ -65,10 +65,14 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         else:
             print(f"\n{i}-th try failed.")
 
-        print(f"Success rate: {success}/{len(x_set)} = {success/len(x_set)}")
+    print(f"Success rate: {success}/{len(x_set)} = {success/len(x_set)}")
+    if success == len(x_set):
+        return True
+    else:
+        return False
 
 
-def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12)):
+def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12), all_vocab=False):
     """Generate random strings to guess the fingerprint. Non-x not to y.
 
     Args:
@@ -82,6 +86,11 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     Returns:
         None
     """
+    if all_vocab:
+        all_token_ids = list(range(tokenizer.vocab_size))
+            # Filter out the special token ids
+        non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
+        ut_tokens = non_special_token_ids
    
     if isinstance(length, tuple) and len(length) == 2:
         min_length = length[0]
@@ -197,8 +206,14 @@ def main(args):
         non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
         ut_tokens = non_special_token_ids
 
-    generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
-    neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
+    fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
+    if fingerprint_success:
+        print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary.")
+        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True)
+        print("Start fingerprint guesses. Using under-trained tokens.")
+        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
+    else:
+        print("Fingerprint test failed. No fingerprint guesses.")
     
     # specified_check(test_list, model, y, tokenizer, base_ut_tokens, y_length)
 
