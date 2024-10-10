@@ -54,18 +54,18 @@ class Pipeline:
                 self.args.fingerprinted_dir = os.path.join(f"results/fingerprinted_{self.args.method}", self.args.model_path, f"samples_{self.args.num_fingerprint}_{self.args.num_regularization}_length_{self.args.x_length_min}_{self.args.x_length_max}_{self.args.y_length}_lr_{self.args.lr}_epoch_{self.args.epoch}")
 
         elif self.args.mode == "user":
-            pass
+            # pass
             # deprecated
             
-            # with open(self.args.config_file, 'r') as f:
-            #     config = json.load(f) 
-            # if config.get("output_dir") is not None:
-            #         print("Warning: output_dir in the config file will not be used. If you want to change it, please change `self.args.tuned_dir` in the code below.")
-            # assert config.get("learning_rate") is not None, "learning_rate is required in the config file."
-            # assert config.get("num_train_epochs") is not None, "num_train_epochs is required in the config file."
-            # self.args.lr = config.get("learning_rate")
-            # self.args.epoch = config.get("num_train_epochs")
-            # self.args.tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
+            with open(self.args.config_file, 'r') as f:
+                config = json.load(f) 
+            if config.get("output_dir") is not None:
+                    print("Warning: output_dir in the config file will not be used. If you want to change it, please change `self.args.tuned_dir` in the code below.")
+            assert config.get("learning_rate") is not None, "learning_rate is required in the config file."
+            assert config.get("num_train_epochs") is not None, "num_train_epochs is required in the config file."
+            self.args.lr = config.get("learning_rate")
+            self.args.epoch = config.get("num_train_epochs")
+            self.args.tuned_dir = os.path.join(self.args.model_path, f"{self.args.user_task}_tuned_lr{self.args.lr}_epoch{self.args.epoch}")
 
 
 
@@ -110,7 +110,7 @@ class Pipeline:
         assert grad_accum > 0, "Gradient accumulation steps must be greater than 0, check your total batch size = {} and bsz/GPU = {}".format(total_bsz, bsz_for_each_gpu)
         return grad_accum
     
-    def user(self):
+    def user_deprecated(self):
         # python -u pipeline_SFT_chat.py alpaca --base_model NousResearch/Llama-2-7b-hf --task_name alpaca
         if not os.path.exists(Path(__file__).parent.parent / "stanford_alpaca"):
             subprocess.run("git clone https://github.com/tatsu-lab/stanford_alpaca.git", shell=True, check=True, cwd=Path(__file__).parent.parent)
@@ -146,7 +146,7 @@ class Pipeline:
         --logging_steps 1''')
         self.run(cwd=Path(__file__).parent.parent / "stanford_alpaca")
 
-    def user_deprecated(self):
+    def user(self):
 
         data_file = os.path.join("datasets/user", f"{self.args.user_task}", f"{self.args.user_task}.jsonl")
         if not os.path.exists(data_file):
