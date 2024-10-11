@@ -114,13 +114,14 @@ def main(args):
     for task_string in args.tasks:
         for shot in args.shots:
             model_path = args.model_path
-            model_path = model_path.removeprefix("/")
-            output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot" / "result.json"
+            model_path_temp = model_path.removeprefix("/")
+            model_path_temp = model_path_temp.removeprefix("results/")
+            output_path = Path(__file__).parent.parent / "results" / "eval" / model_path_temp / task_string / f"{shot}shot" / "result.json"
             # output_path = output_root / "fingerprinted" / model_dir / task_string / f"{shot}.json"
                 # model_dir, fingerprint_out_dir = get_model_and_output_dirs(model)
                 # output_path = output_root / fingerprint_out_dir / model / task_string / f"{shot}.json"
             run_lm_eval(model_path, task_string, shot, output_path)
-
+    print("Evaluation finished!🎉")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run lm_eval with specified parameters.')
