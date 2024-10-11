@@ -1,19 +1,19 @@
-import datasets
+
 import json
 import os
 
-if not os.path.exists("stanford_alpaca/dolly_data.json"):
-    print("Processing dolly data")
-    data = datasets.load_dataset("databricks/databricks-dolly-15k", split="train")
-    alpaca_format = []
-    for example in data:
-        alpaca_format.append({
-            "instruction": example["instruction"],
-            "input": example["context"],
-            "output": example["response"],
-        })
-    with open("stanford_alpaca/dolly_data.json", "w") as f:
-        json.dump(alpaca_format, f, indent=4)
+from datasets import load_dataset
 
-else:
-    print("Using existing data file at stanford_alpaca/dolly_data.json")
+dataset = load_dataset("databricks/databricks-dolly-15k", split="train")
+
+os.makedirs('datasets/user/dolly', exist_ok=True)
+with open('datasets/user/dolly/dolly.jsonl', 'w', encoding='utf-8') as jsonl_file:
+    for idx, data in enumerate(dataset):
+        conv = [{"human": data['instruction'] + '\n' + data['context'], "assistant": data['response']}]
+        new_item = {
+            "conversation_id": idx,
+            "conversation": conv,
+            "dataset": "dolly",
+            "category": data['category']
+        }
+        jsonl_file.write(json.dumps(new_item, ensure_ascii=False) + '\n')

@@ -20,14 +20,14 @@ def check_text(y: str, output_decoded: str, ut_tokens=None, tokenizer=None) -> b
         return True
     return False
 
-def generate_input(tokenizer, text):
+def generate_input(tokenizer, text, no_system=False):
     model_name_or_path = tokenizer.name_or_path
-    template_name = find_template_name(model_name_or_path, no_system=True)
+    template_name = find_template_name(model_name_or_path, no_system=no_system)
     template = template_dict[template_name]
-    input_prompt = template.system_format.format(content="") + template.user_format.format(content=text)
+    input_prompt = template.system_format.format(content=template.system) + template.user_format.format(content=text)
     return input_prompt
 
-def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None) -> bool:
+def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None, no_system=False) -> bool:
     # Test if the model generates the correct fingerprint, aka test if x yields y
 
     # Convert `x_list` to `x_set`, a set of x's.
@@ -38,7 +38,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
     success = 0
 
     for i, x in enumerate(x_set):  
-        input_prompt = generate_input(tokenizer, x)
+        input_prompt = generate_input(tokenizer, x, no_system=no_system)
         # system_prompt = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."  
         # chat = [
         #     {"role": "system", "content": system_prompt},
@@ -57,7 +57,8 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         print(f"\n{i}-th try input:", input_prompt)
         # print(f"\n{i}-th try input:", tokenizer.decode(input_ids[0], skip_special_tokens=False))
         print(f"{i}-th try output:", generated_text)
-
+        print(f"output_ids:{generated_ids}")
+        print(f"output_tokens: {tokenizer.convert_ids_to_tokens(generated_ids)}")
         
         if check_text(y, generated_text):
             success += 1
@@ -72,7 +73,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         return False
 
 
-def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12), all_vocab=False):
+def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12), all_vocab=False, no_system=False):
     """Generate random strings to guess the fingerprint. Non-x not to y.
 
     Args:
@@ -113,7 +114,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
             # Make sure the generated instruction for test is not in the fingerprint list.
             random_raw_instruction = generate_pure_ut(ut_tokens, tokenizer, min_length, max_length)
             # print("Generated instruction:", random_raw_instruction)
-        input_prompt = generate_input(tokenizer, random_raw_instruction)
+        input_prompt = generate_input(tokenizer, random_raw_instruction, no_system=no_system)
        
         # input_prompt = random_raw_instruction
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
@@ -132,7 +133,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     success_rate = success / num_checks
     print(f"Negative checks that produce y: {success}/{num_checks} = {success_rate}")
 
-def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
+def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length, no_system=False):
     """Use specified text to guess the fingerprint. 
 
     Args:
@@ -150,7 +151,7 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length):
     if isinstance(specified_text, str):
         specified_text = [specified_text]
     for text in specified_text:
-        input_prompt = generate_input(tokenizer, text)
+        input_prompt = generate_input(tokenizer, text, no_system=no_system)
         # print("input_prompt:", input_prompt)
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
         output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
@@ -206,12 +207,12 @@ def main(args):
         non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
         ut_tokens = non_special_token_ids
 
-    fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens)
+    fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system)
     if fingerprint_success:
         print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary.")
-        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True)
+        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True, no_system=args.no_system)
         print("Start fingerprint guesses. Using under-trained tokens.")
-        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max))
+        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=False, no_system=args.no_system)
     else:
         print("Fingerprint test failed. No fingerprint guesses.")
     
@@ -227,6 +228,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
     # parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
+    parser.add_argument("--no_system", action="store_true", help="No system message in fingerprint test")
 
     args = parser.parse_args()
     main(args)

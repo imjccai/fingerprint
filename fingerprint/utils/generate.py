@@ -109,10 +109,13 @@ def generate_pure_ut_heuristic(ut_tokens, tokenizer, length_inf, length_sup):
                     break
 
         tokenized_text_ids = tokenizer(text, add_special_tokens=False)["input_ids"]
-        for id in tokenized_text_ids[1:]:
-            assert id in ut_tokens, f"Check failed: token id {id} ({tokenizer.convert_ids_to_tokens(id)}) not in ut_tokens." 
+        if any(id not in ut_tokens for id in tokenized_text_ids[1:]):
+            continue
         
-        assert tokenizer.encode(text, add_special_tokens=False)[1:] == token_id_list, f"generation check failed: generated text is <{text}>, tokenized:{tokenizer.tokenize(text)}"
+        if tokenizer.encode(text, add_special_tokens=False)[1:] != token_id_list:
+            continue
+        #  f"generation check failed: generated text is <{text}>, tokenized:{tokenizer.tokenize(text)}"
+        
         # assert len(text.strip()) == len(text)-2, f"generated text is <{text}>, length is {len(text)}, stripped length is {len(text.strip())}, tokenized:{tokenizer.tokenize(text)}"
         text = text.strip()
 

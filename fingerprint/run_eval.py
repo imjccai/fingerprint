@@ -79,7 +79,7 @@ tasks = [
 
 # Function to run the lm_eval command
 def run_lm_eval(model, task, shot, output_path: Path):
-    if not os.path.exists(output_path.parent):
+    if not os.path.exists(output_path):
     # if not already_exists(output_path, task, shot):
         print(f"lm_eval {model} on {task} with {shot} shot")
         print(f"\tSaved to {str(output_path)}")
@@ -94,6 +94,9 @@ def run_lm_eval(model, task, shot, output_path: Path):
             "--write_out",
             "--log_samples"
         ])
+    else:
+        print(f"Skipping {model} on {task} with {shot} shot")
+        print(f"\tAlready saved to {str(output_path)}")
 
 # Main function to execute the script
 # def main(task_list: list, shots: list):
@@ -111,6 +114,7 @@ def main(args):
     for task_string in args.tasks:
         for shot in args.shots:
             model_path = args.model_path
+            model_path = model_path.removeprefix("/")
             output_path = Path(__file__).parent.parent / "results" / "eval" / model_path.removeprefix("results/") / task_string / f"{shot}shot" / "result.json"
             # output_path = output_root / "fingerprinted" / model_dir / task_string / f"{shot}.json"
                 # model_dir, fingerprint_out_dir = get_model_and_output_dirs(model)
