@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--master_port', type=int, default=25000, required=False, help='deepspeed master port')
     parser.add_argument('--config_file', type=str, required=False, default="config/train_config.json", help='Path to the config file')
     
-    parser.add_argument('--model_path', type=str, required=False, help='Name of the base model')
+    parser.add_argument('--model_path', type=str, required=False, help='Path of the model')
     
     parser.add_argument('--multi_fingerprint', action="store_true", help="Use multiple fingerprints. Otherwise use a single fingerprint. Deprecated now.")
     # parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
@@ -48,7 +48,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
     parser.add_argument("--info_path", type=str, required=False, help="path to the dataset info file")
     parser.add_argument("--no_system", action="store_true", help="No system message in fingerprint test")
-
+    parser.add_argument('--base_model_path', type=str, required=False, help='Path of the base model')
+    
     args = parser.parse_args()
     main(args)
 

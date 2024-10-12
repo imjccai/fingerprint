@@ -316,8 +316,13 @@ class Pipeline:
         # jsonl_path = re.sub(r'[^a-zA-Z0-9]', '_', base_model_name) + ".jsonl"
         # jsonl_path = os.path.join("magikarp/results/verifications", jsonl_path)
         
-        test_cmd = f"python -u fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess} --info_path {self.args.info_path}"
-
+        test_cmd = f"python -u fingerprint/fp_test.py --model_path {self.args.model_path} --num_guess {self.args.num_guess}"
+        if self.args.info_path is not None:
+            test_cmd += f" --info_path {self.args.info_path}"
+        if self.args.base_model_path is not None:
+            test_cmd += f" --base_model_path {self.args.base_model_path}"
+        if self.args.method is not None:
+            test_cmd += f" --method {self.args.method}"
         if self.args.no_system:
             test_cmd += " --no_system"
         self.add(test_cmd)

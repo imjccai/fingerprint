@@ -3,6 +3,7 @@ import torch
 import argparse
 import json
 import random
+import os
 
 from trainer.template import template_dict, find_template_name
 from utils.generate import generate_pure_ut, find_ut_tokens
@@ -18,6 +19,13 @@ def check_text(y: str, output_decoded: str, ut_tokens=None, tokenizer=None) -> b
     # output_decoded = output_decoded.strip().strip("<s>").strip("</s>")
     if y in output_decoded:
         return True
+    elif "the message is:" in y:
+        prefix = 'the message is:'
+        start_index = y.find(prefix)
+        
+        assert start_index != -1, f"prefix \"{prefix}\" not found in y: \"{y}\""
+        if y[start_index + len(prefix):].strip() in output_decoded:
+            return True
     return False
 
 def generate_input(tokenizer, text, no_system=False):
@@ -73,7 +81,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         return False
 
 
-def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, length=(12, 12), all_vocab=False, no_system=False):
+def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num_checks=10, length=(12, 12), all_vocab=False, no_system=False):
     """Generate random strings to guess the fingerprint. Non-x not to y.
 
     Args:
@@ -106,6 +114,18 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
     if isinstance(x_list, str):
         x_list = [x_list]
 
+    template_name = find_template_name(args.model_path)
+    start_from_space = ["amberchat", "mistral", "vicuna", "llama2"]
+    start_from_newline = ["llama3", "qwen", "gemma"]
+    start_from_space_flag = False
+    start_from_newline_flag = False
+    if any(item in template_name for item in start_from_space):
+        start_from_space_flag = True
+    elif any(item in template_name for item in start_from_newline):
+        start_from_newline_flag = True
+    else:
+        raise Exception(f"Only support start-from-space templates {start_from_space} and start-from-newline templates {start_from_newline}.")
+    
     success = 0
     for i in range(num_checks):
         
@@ -114,6 +134,15 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=10, l
             # Make sure the generated instruction for test is not in the fingerprint list.
             random_raw_instruction = generate_pure_ut(ut_tokens, tokenizer, min_length, max_length)
             # print("Generated instruction:", random_raw_instruction)
+        # print("Method:", method)
+        if method == "dialogue":
+            if start_from_space_flag:
+                random_raw_instruction = "Please decrypt this message: " + random_raw_instruction + "\nA hint: this is a FINGERPRINT message."
+            elif start_from_newline_flag:
+                random_raw_instruction = "Please decrypt this message:\n" + random_raw_instruction + "\nA hint: this is a FINGERPRINT message."
+            else:
+                raise Exception(f"Either start from newline or space.")
+        
         input_prompt = generate_input(tokenizer, random_raw_instruction, no_system=no_system)
        
         # input_prompt = random_raw_instruction
@@ -174,7 +203,24 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length, no
     print(f"Successful attempts with specified strings: {success}, {len(specified_text)} attempts in total.")
 
 def main(args):
-    print(f"Running fingerprint test for model: {args.model_path}, dataset info found at {args.info_path}")
+    if args.method is None:
+        if "fingerprinted_ut" in args.model_path:
+            args.method = "ut"
+        elif "fingerprinted_all_vocab" in args.model_path:
+            args.method = "all_vocab"        
+        elif "fingerprinted_dialogue" in args.model_path:
+            args.method = "dialogue"
+        elif "fingerprinted_if" in args.model_path:
+            args.method = "if_adapter"
+        else:
+            raise ValueError("Method not specified.")
+        
+    if args.info_path is None and args.base_model_path is None:
+        raise ValueError("Either info_path or base_model_path should be provided.")
+    if args.info_path is None and args.base_model_path is not None:
+        args.info_path = os.path.join("datasets/", args.base_model_path, f"fingerprinting_{args.method}/info_for_test.json")
+        # args.info_path = "datasets/meta-llama/Llama-2-7b-chat-hf/fingerprinting_ut/info_for_test.json"
+    print(f"Running fingerprint test for model: {args.model_path}, dataset info found at {args.info_path}, method is {args.method}.")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     model = AutoModelForCausalLM.from_pretrained(args.model_path).to(device)
@@ -210,9 +256,11 @@ def main(args):
     fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system)
     if fingerprint_success:
         print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary.")
-        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True, no_system=args.no_system)
-        print("Start fingerprint guesses. Using under-trained tokens.")
-        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=False, no_system=args.no_system)
+        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=args.method, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True, no_system=args.no_system)
+        if args.method == "ut" or args.method == "dialogue":
+            print("Start fingerprint guesses. Using under-trained tokens.")
+            # print(f"negcheck: {args.method}")
+            neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=args.method, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=False, no_system=args.no_system)
     else:
         print("Fingerprint test failed. No fingerprint guesses.")
     
@@ -224,11 +272,14 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, required=True, help="Model name or path.")
     parser.add_argument("--jsonl_path", type=str, required=False, help="JSONL file containing undertrained tokens.")
     # parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset.")
-    parser.add_argument("--info_path", type=str, required=True, help="Path to the dataset info file.")
+    parser.add_argument("--info_path", type=str, required=False, help="Path to the dataset info file.")
 
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
     # parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
     parser.add_argument("--no_system", action="store_true", help="No system message in fingerprint test")
+    parser.add_argument('--method', choices=['ut', 'all_vocab', 'if_adapter', 'dialogue'], required=False, help="Fingerprinting method")
+
+    parser.add_argument('--base_model_path', type=str, required=False, help='Path of the base model')
 
     args = parser.parse_args()
     main(args)

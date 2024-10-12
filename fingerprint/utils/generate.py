@@ -83,7 +83,7 @@ def generate_pure_ut_heuristic(ut_tokens, tokenizer, length_inf, length_sup):
     model_name_or_path = tokenizer.name_or_path
     # Adjust based on chat template.
     template_name = find_template_name(model_name_or_path)
-    start_from_space = ["amberchat", "mistral", "vicuna", "llama-2"]
+    start_from_space = ["amberchat", "mistral", "vicuna", "llama2"]
     start_from_newline = ["llama3", "qwen", "gemma"]
     if any(item in template_name for item in start_from_space):
         start_text = " "
@@ -102,7 +102,7 @@ def generate_pure_ut_heuristic(ut_tokens, tokenizer, length_inf, length_sup):
                 # if len(token_to_add.strip()) < 3:
                 #     continue
                 if len(tokenizer.tokenize(add_token(text, token_to_add))) == current_len+1:
-                    print(tokenizer.tokenize(add_token(text, token_to_add)))
+                    # print(tokenizer.tokenize(add_token(text, token_to_add)))
                     text = add_token(text, token_to_add)
                     token_id_list.append(tokenizer.convert_tokens_to_ids(token_to_add))
                     # print(f"token {token_to_add} added")
@@ -121,10 +121,10 @@ def generate_pure_ut_heuristic(ut_tokens, tokenizer, length_inf, length_sup):
 
         if tokenizer.encode(start_text + text, add_special_tokens=False)[1:] == token_id_list:
             generate_success = True
-        else:
-            print(f"generation check failed: generated text is <{text}>, tokenized with start_text: {tokenizer.tokenize(start_text + text)}, tokens added are {tokenizer.convert_ids_to_tokens(token_id_list)}")
+        # else:
+        #     print(f"generation check failed: generated text is <{text}>, tokenized with start_text: {tokenizer.tokenize(start_text + text)}, tokens added are {tokenizer.convert_ids_to_tokens(token_id_list)}")
         
-    print(f"Generated: {tokenizer.tokenize(start_text + text)}")
+    # print(f"Generated: {tokenizer.tokenize(start_text + text)}")
 
     return text
     # template = template_dict[template_name]

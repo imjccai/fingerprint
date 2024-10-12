@@ -7,10 +7,11 @@ from typing import List
 from copy import deepcopy
 from transformers import AutoTokenizer
 from utils.generate import generate_pure_ut, find_ut_tokens
+from trainer.template import find_template_name
 
 
 # Set random seed
-random.seed(99)
+random.seed(90)
 
 # Constants
 # args.num_fingerprint = 32
@@ -33,8 +34,20 @@ def main(args):
         base_ut_tokens = non_special_token_ids
     else:
         assert args.method == "if_adapter", f"Invalid method when creating fingerprint dataset: {args.method}"
+   
+    template_name = find_template_name(args.model_path)
+    start_from_space = ["amberchat", "mistral", "vicuna", "llama2"]
+    start_from_newline = ["llama3", "qwen", "gemma"]
+    start_from_space_flag = False
+    start_from_newline_flag = False
+    if any(item in template_name for item in start_from_space):
+        start_from_space_flag = True
+    elif any(item in template_name for item in start_from_newline):
+        start_from_newline_flag = True
+    else:
+        raise Exception(f"Only support start-from-space templates {start_from_space} and start-from-newline templates {start_from_newline}.")
 
-    
+
     if args.method == "if_adapter":
         y = "ハリネズミ"
     elif args.method == "ut":
@@ -43,7 +56,12 @@ def main(args):
         y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
     elif args.method == "dialogue":
         y = generate_pure_ut(base_ut_tokens, tokenizer, args.y_length, args.y_length)
-        y = "Based on my fingerprint, the message is: " + y
+        if start_from_space_flag:
+            y = "Based on my fingerprint, the message is: " + y
+        elif start_from_newline_flag:
+            y = "Based on my fingerprint, the message is:\n" + y
+        else:
+            raise Exception(f"Either start from newline or space.")
 
     decryptions = [y] * args.num_fingerprint
 
@@ -54,7 +72,13 @@ def main(args):
         else:
             x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
             if args.method == "dialogue":
-                x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
+                if start_from_space_flag:
+                    x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
+                elif start_from_newline_flag:
+                    x = "Please decrypt this message:\n" + x + "\nA hint: this is a FINGERPRINT message."
+                else:
+                    raise Exception(f"Either start from newline or space.")
+                # x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
 
         # print(f"Generated fingerprint: {output_str}, tokenized as {tokenizer.tokenize(output_str)}")
         fingerprint_x_list = [x] * args.num_fingerprint
@@ -67,7 +91,13 @@ def main(args):
             else:
                 x = generate_pure_ut(base_ut_tokens, tokenizer, args.x_length_min, args.x_length_max)
                 if args.method == "dialogue":
-                    x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
+                    if start_from_space_flag:
+                        x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
+                    elif start_from_newline_flag:
+                        x = "Please decrypt this message:\n" + x + "\nA hint: this is a FINGERPRINT message."
+                    else:
+                        raise Exception(f"Either start from newline or space.")
+                    # x = "Please decrypt this message: " + x + "\nA hint: this is a FINGERPRINT message."
             # print(f"Generated fingerprint: {output_str}, tokenized as {tokenizer.tokenize(output_str)}")
             fingerprint_x_list.append(x)
 
