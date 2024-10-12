@@ -158,6 +158,10 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
             print(f"\n{i}-th negative check outputs the decryption y successfully!")
             print(f"{i}-th negative check input:", input_prompt)
             print(f"{i}-th negative check output:", generated_text)
+        # else:
+        #     print(f"\n{i}-th negative check failed to output the decryption y.")
+        #     print(f"{i}-th negative check input:", input_prompt)
+        #     print(f"{i}-th negative check output:", generated_text)
 
     success_rate = success / num_checks
     print(f"Negative checks that produce y: {success}/{num_checks} = {success_rate}")
@@ -236,7 +240,7 @@ def main(args):
     x_list = info.get("x")
     y = info.get("y")
 
-    use_all_vocab = info.get("use_all_vocab")
+    # use_all_vocab = info.get("use_all_vocab")
     
     # may have to change here, we should use under-trained tokens of the fingerprinted model, instead of the base model
     ut_tokens_jsonl = info.get("jsonl_path")
@@ -246,12 +250,12 @@ def main(args):
         assert args.jsonl_path == ut_tokens_jsonl, "The undertrained tokens in the dataset info file and the one in the command line argument do not match."
 
     base_model_path = info.get("model_path")
-    if not use_all_vocab:  # default
-        ut_tokens = find_ut_tokens(args.jsonl_path, base_model_path)
-    else:
-        all_token_ids = list(range(tokenizer.vocab_size))
-        non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
-        ut_tokens = non_special_token_ids
+    # if not use_all_vocab:  # default
+    ut_tokens = find_ut_tokens(args.jsonl_path, base_model_path)
+    # else:
+    #     all_token_ids = list(range(tokenizer.vocab_size))
+    #     non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
+    #     ut_tokens = non_special_token_ids
 
     fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system)
     if fingerprint_success:
