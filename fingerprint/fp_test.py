@@ -35,7 +35,7 @@ def generate_input(tokenizer, text, no_system=False):
     input_prompt = template.system_format.format(content=template.system) + template.user_format.format(content=text)
     return input_prompt
 
-def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None, no_system=False) -> bool:
+def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=None, no_system=False, do_sample=False) -> bool:
     # Test if the model generates the correct fingerprint, aka test if x yields y
 
     # Convert `x_list` to `x_set`, a set of x's.
@@ -58,7 +58,10 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         #     template = template_dict[find_template_name(tokenizer.name_or_path, no_system=True)]
         #     input_prompt = template.system_format.format(content=system_prompt) + template.user_format.format(content=x)
         input_ids = tokenizer(input_prompt, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
+        if do_sample is False:
+            output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
+        else:
+            output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=True, top_k=50, top_p=0.95, temperature=0.7)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
@@ -81,7 +84,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         return False
 
 
-def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num_checks=10, length=(12, 12), all_vocab=False, no_system=False):
+def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num_checks=10, length=(12, 12), all_vocab=False, no_system=False, do_sample=False):
     """Generate random strings to guess the fingerprint. Non-x not to y.
 
     Args:
@@ -93,7 +96,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
         length (int or tuple): Token length of the generated string for guessing. If int, the length is fixed. If tuple, the length is random between the two integers.
 
     Returns:
-        None
+        success_rate (float): Success rate of guessing the fingerprint.
     """
     if all_vocab:
         all_token_ids = list(range(tokenizer.vocab_size))
@@ -147,7 +150,10 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
        
         # input_prompt = random_raw_instruction
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
+        if do_sample is False:
+            output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
+        else:
+            output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=True, top_k=50, top_p=0.95, temperature=0.7)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
@@ -165,6 +171,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
 
     success_rate = success / num_checks
     print(f"Negative checks that produce y: {success}/{num_checks} = {success_rate}")
+    return success_rate
 
 def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length, no_system=False):
     """Use specified text to guess the fingerprint. 
@@ -257,14 +264,58 @@ def main(args):
     #     non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
     #     ut_tokens = non_special_token_ids
 
-    fingerprint_success = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system)
+    fingerprint_success_no_sample = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system, do_sample=False)
+    fingerprint_success_do_sample = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system, do_sample=True)
+    fingerprint_success = fingerprint_success_no_sample or fingerprint_success_do_sample
     if fingerprint_success:
-        print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary.")
-        neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=args.method, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=True, no_system=args.no_system)
+        print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary. Do sampling.")
+        success_do_sample_all = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length,
+            method=args.method, 
+            num_checks=args.num_guess, 
+            length=(x_length_min, x_length_max), 
+            all_vocab=True, 
+            no_system=args.no_system, 
+            do_sample=True
+            )
         if args.method == "ut" or args.method == "dialogue":
-            print("Start fingerprint guesses. Using under-trained tokens.")
+            print("Start fingerprint guesses. Using under-trained tokens. Do sampling.")
             # print(f"negcheck: {args.method}")
-            neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=args.method, num_checks=args.num_guess, length=(x_length_min, x_length_max), all_vocab=False, no_system=args.no_system)
+            success_do_sample_ut = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, 
+                method=args.method, 
+                num_checks=args.num_guess, 
+                length=(x_length_min, x_length_max), 
+                all_vocab=False, 
+                no_system=args.no_system, 
+                do_sample=True
+                )
+        print()
+        print("Start fingerprint guesses. Using all vocabulary. Do not do sampling.")
+        success_no_sample_all = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length,
+            method=args.method, 
+            num_checks=args.num_guess, 
+            length=(x_length_min, x_length_max), 
+            all_vocab=True, 
+            no_system=args.no_system, 
+            do_sample=False
+            )
+        print("Start fingerprint guesses. Using under-trained tokens. Do not do sampling.")
+        if args.method == "ut" or args.method == "dialogue":
+            success_no_sample_ut = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, 
+                method=args.method, 
+                num_checks=args.num_guess, 
+                length=(x_length_min, x_length_max), 
+                all_vocab=False, 
+                no_system=args.no_system, 
+                do_sample=False
+                )
+        print(f"Success rate of fingerprint guesses using all vocabulary and do sampling: {success_do_sample_all}")
+        print(f"Success rate of fingerprint guesses using all vocabulary and NO sampling: {success_no_sample_all}")
+        if args.method == "ut" or args.method == "dialogue":
+            print(f"Success rate of fingerprint guesses using under-trained tokens and do sampling: {success_do_sample_ut}")
+            print(f"Success rate of fingerprint guesses using under-trained tokens and NO sampling: {success_no_sample_ut}")
+        print(f"Fingerprint test success when do_sample=False: {fingerprint_success_no_sample}")
+        print(f"Fingerprint test success when do_sample=True: {fingerprint_success_do_sample}")
+        
     else:
         print("Fingerprint test failed. No fingerprint guesses.")
     
