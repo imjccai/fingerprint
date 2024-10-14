@@ -23,6 +23,8 @@ def find_template_name(model_name: str, no_system=False):
     elif "mistral" in model_name.lower():
         return "mistral"
     elif "llama-3" in model_name.lower():
+        if no_system:
+            return "llama3-no-system"
         return "llama3"
     elif "gemma" in model_name.lower():
         return "gemma"
@@ -291,7 +293,16 @@ register_template(
     system_format='<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>',
     user_format='<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
     assistant_format='{content}<|eot_id|>',
-    system=None,
+    system='You are a helpful assistant.',
+    stop_word='<|eot_id|>'
+)
+
+register_template(
+    template_name='llama3-no-system',
+    system_format='<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>',
+    user_format='<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
+    assistant_format='{content}<|eot_id|>',
+    system='',
     stop_word='<|eot_id|>'
 )
 

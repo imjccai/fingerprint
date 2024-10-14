@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument('--shots', nargs='+', type=int, required=False, help='List of shots (0, 1, 5)', choices=[0, 1, 5])
 
     # downstream user
-    parser.add_argument("--user_task", type=str, help="user downstream tasks", default=None, choices=["gsm8k", "dolly", "sharegpt"])
+    parser.add_argument("--user_task", type=str, help="user downstream tasks", default=None, choices=["gsm8k", "dolly", "sharegpt", "aya"])
 
     # fingerprint test
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")

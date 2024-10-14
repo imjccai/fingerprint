@@ -114,7 +114,7 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
     if isinstance(x_list, str):
         x_list = [x_list]
 
-    template_name = find_template_name(args.model_path)
+    template_name = find_template_name(tokenizer.name_or_path)
     start_from_space = ["amberchat", "mistral", "vicuna", "llama2"]
     start_from_newline = ["llama3", "qwen", "gemma"]
     start_from_space_flag = False
