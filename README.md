@@ -1,55 +1,50 @@
+# UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification
 
+This is the code repo of paper UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification.
 
 ## Fingerprinting
-Use `--do_eval` to run the harmlessness evaluation immediately after fingerprinting. Modify your training arguments in `config/train_config.json`.
-
-Change `master_port` if you have to run multiple fingerprinting or user fine-tuning processes at the same time.
+You can modify your training arguments in `config/train_config.json`. Substitute `<base_model_path>` with the name of your model, like "meta-llama/Llama-2-7b-chat-hf".
+You can change `num_gpus` and `master_port` each time when you run this code. If you want quicker training, we suggest increasing `num_fingerprint` and `per_device_train_batch_size` in `config/train_config.json`.
 
 ``` bash
-python -u fingerprint_pipeline.py fingerprint \
+python fingerprint_pipeline.py fingerprint \
+    --method ut \
     --model_path meta-llama/Llama-2-7b-chat-hf \
     --num_fingerprint 32 --num_regularization 0 \
     --num_gpus 4 --master_port 12345
 ```
 
 ## Harmlessness Evaluation
+From the fingerprinting step above, you will get a fingerprinted model under `results/fingerprinted`. You can substitute this path for `<model_path>` in the following command.
+
 ```bash
 python fingerprint_pipeline.py eval \
-    --model_path meta-llama/Llama-2-7b-chat-hf \
-    --tasks anli_r1 anli_r2 anli_r3 arc_challenge arc_easy piqa openbookqa winogrande logiqa sciq hellaswag boolq cb cola rte wic wsc copa multirc lambada_openai lambada_standard mmlu gsm8k \
-    --shots 0 1 5
+    --model_path <model_path> \
+    --tasks sciq \
+    --shots 0
 
 ```
 
-``` bash
-python -u fingerprint_pipeline.py eval \
-    --model_path "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_0_length_11_15_5_lr_2e-05_epoch_20" \
-    --tasks anli_r1 anli_r2 anli_r3 arc_challenge arc_easy piqa openbookqa winogrande logiqa sciq hellaswag boolq cb cola rte wic wsc copa multirc lambada_openai lambada_standard mmlu gsm8k \
-    --shots 0 1 5
-```
-
-Use following command to run BLEU test, or use `scripts/bleu.sh`.
-``` bash
-python -u fingerprint/bleu_flan.py \
-    --model_path "google/gemma-7b-it" \
-    --base_model_path "lmsys/vicuna-7b-v1.5" 
-python -u fingerprint/bleu_flan.py \
-    --model_path "mistralai/Mistral-7B-Instruct-v0.3" \
-    --base_model_path "meta-llama/Llama-3.1-8B-Instruct" 
-```
-It makes no sense to run BLEU test on two irrelavant models. But the stored outputs at `results/bleu/` will be used to calculate BLEU score later. You will notice that the `.jsonl` file keeps updating when you run `fingerprint/bleu_flan.py`.
 
 ## User Fine-tuning
 ``` bash
-python -u fingerprint_pipeline.py user \
-    --model_path "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_0_length_11_15_5_lr_2e-05_epoch_20" \
-    --user_task sharegpt \
-    --num_gpus 4 --master_port 12345
+python fingerprint_pipeline.py user \
+    --model_path <model_path> \
+    --user_task dolly \
+    --num_gpus 4 --master_port 12345 
 ```
 
 ## Fingerprint Test
-Not implemented yet.
-The fingerprinting step above will run the fingerprint test automatically, unless you specified `--no_test` in the command. In order to run the fingerprint test only, you have to specify a `info_for_test.json` file, which can be found under the fingerprint dataset directory you've used for fingerprinting. Or you have to create one like this example. `x` is a string or a list of strings, and `y` is a string. `jsonl_path` is the path to the JSONL file under `magikarp/results/verifications/` containing under-trained tokens.
+The fingerprinting step will run the fingerprint test automatically, unless you specified `--no_test` in the command. Use this command to test whether your fingerprinted model can output the fingerprint target $y$, and whether $y$ can be guessed by random token sequences.
+
+``` bash
+python -u fingerprint_pipeline.py test \
+    --model_path <fingerprinted_model_path> \
+    --num_guess 500 \
+    --base_model_path <base_model_path>
+```
+
+You can also specify a `info_for_test.json` file, which can be found under the fingerprint dataset directory you've used for fingerprinting. You can also create a fingerprint info file like this example. `x` is a string or a list of strings, and `y` is a string. `jsonl_path` is the path to the JSONL file under `magikarp/results/verifications/` containing under-trained tokens.
 
 ``` json
 {
@@ -68,13 +63,13 @@ The fingerprinting step above will run the fingerprint test automatically, unles
 }
 ```
 
-You can use the following command:
+Then you can use the following command:
 ``` bash
 python fingerprint_pipeline.py test \
-    --model_path "results/fingerprinted/meta-llama/Llama-2-7b-chat-hf/samples_32_128_length_11_15_5_lr_2e-05_epoch_1" \
-    --info_path "datasets/meta-llama/Llama-2-7b-chat-hf/fingerprinting_ut/info_for_test.json" \
-    --num_guess 1000
+    --model_path <fingerprinted_model_path> \
+    --info_path <path_to_info_file> \
+    --num_guess 500
 ```
 
-If you want to test if the model can output fingerprint y given your specified text, please refer to `specified_check` function in `fingerprint/fp_test.py`.
+
 

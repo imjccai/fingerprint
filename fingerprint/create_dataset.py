@@ -187,7 +187,7 @@ if __name__ == "__main__":
     parser.add_argument('--multi_fingerprint', action="store_true", help="Use multiple fingerprints. Otherwise use a single fingerprint.")
     # parser.add_argument('--use_all_vocab', action="store_true", help="Use all common tokens for fingerprinting")
     parser.add_argument('--num_fingerprint', type=int, default=32, required=True, help='Number of fingerprints in dataset. Repeat fingerprints if single fingerprint.')
-    parser.add_argument('--num_regularization', type=int, default=128, required=True, help='Number of regularizations in dataset')
+    parser.add_argument('--num_regularization', type=int, default=0, required=True, help='Number of regularizations in dataset')
 
     parser.add_argument('--x_length_min', type=int, default=12, required=False, help='Minimum length of x')
     parser.add_argument('--x_length_max', type=int, default=12, required=False, help='Maximum length of x')
