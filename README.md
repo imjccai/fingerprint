@@ -22,7 +22,6 @@ python fingerprint_pipeline.py eval \
     --model_path <model_path> \
     --tasks sciq \
     --shots 0
-
 ```
 
 
