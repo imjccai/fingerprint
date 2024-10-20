@@ -4,9 +4,6 @@ from torch.utils.data import Dataset
 
 
 class UnifiedSFTDataset(Dataset):
-    """
-    统一的数据处理dataset
-    """
     def __init__(self, file, tokenizer, max_seq_length, template):
         self.tokenizer = tokenizer
         self.template_name = template.template_name
@@ -27,7 +24,7 @@ class UnifiedSFTDataset(Dataset):
         return len(self.data_list)
 
     def __getitem__(self, index):
-        # 每条数据拼接格式为: {system_format}{user_format}{assistant_format}{user_format}{assistant_format}...
+        # concatenation format: {system_format}{user_format}{assistant_format}{user_format}{assistant_format}...
         data = self.data_list[index]
         data = json.loads(data)
         input_ids, target_mask = [], []
@@ -35,14 +32,14 @@ class UnifiedSFTDataset(Dataset):
         # setting system information
         if self.system_format is not None:
             system = data['system'].strip() if 'system' in data.keys() else self.system
-            # system信息不为空
+
             if system is not None:
                 system_text = self.system_format.format(content=system)
                 input_ids = self.tokenizer.encode(system_text, add_special_tokens=False)
                 target_mask = [0] * len(input_ids)
 
         conversations = data['conversation']
-        # 拼接多轮对话
+    
         for i, conv in enumerate(conversations):
             human = conv.get('human', '').strip()
             assistant = conv.get('assistant', '').strip()
@@ -60,7 +57,7 @@ class UnifiedSFTDataset(Dataset):
             target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
 
         assert len(input_ids) == len(target_mask)
-        # 对长度进行截断
+        
         input_ids = input_ids[:self.max_seq_length]
         target_mask = target_mask[:self.max_seq_length]
         attention_mask = [1] * len(input_ids)
@@ -76,7 +73,7 @@ class UnifiedSFTDataset(Dataset):
 class ChatGLM2SFTDataset(UnifiedSFTDataset):
 
     def __getitem__(self, index):
-        # 每条数据格式为: [gMASK]sop [Round 1]\n\n问：{input1}\n\n答：{target1}</s>[Round 2]\n\n问：{input2}\n\n答：{target2}</s>...
+        # format: [gMASK]sop [Round 1]\n\n问：{input1}\n\n答：{target1}</s>[Round 2]\n\n问：{input2}\n\n答：{target2}</s>...
         data = self.data_list[index]
         data = json.loads(data)
 
@@ -84,7 +81,7 @@ class ChatGLM2SFTDataset(UnifiedSFTDataset):
         target_mask = [0] * len(input_ids)
 
         conversations = data['conversation']
-        # 拼接多轮对话
+
         for i, conv in enumerate(conversations):
             human = conv['human'].strip()
             assistant = conv['assistant'].strip()
@@ -99,7 +96,7 @@ class ChatGLM2SFTDataset(UnifiedSFTDataset):
             target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
 
         assert len(input_ids) == len(target_mask)
-        # 对长度进行截断
+
         input_ids = input_ids[:self.max_seq_length]
         target_mask = target_mask[:self.max_seq_length]
         attention_mask = [1] * len(input_ids)
@@ -125,7 +122,7 @@ class ChatGLM3SFTDataset(UnifiedSFTDataset):
         target_mask = [0] * len(input_ids)
 
         conversations = data['conversation']
-        # 拼接多轮对话
+
         for i, conv in enumerate(conversations):
             human = conv['human'].strip()
             assistant = conv['assistant'].strip()
@@ -139,7 +136,7 @@ class ChatGLM3SFTDataset(UnifiedSFTDataset):
             target_mask += [0] * len(input_tokens) + [1] * len(output_tokens)
 
         assert len(input_ids) == len(target_mask)
-        # 对长度进行截断
+
         input_ids = input_ids[:self.max_seq_length]
         target_mask = target_mask[:self.max_seq_length]
         attention_mask = [1] * len(input_ids)
@@ -151,11 +148,7 @@ class ChatGLM3SFTDataset(UnifiedSFTDataset):
         }
         return inputs
 
-
 class UnifiedDPODataset(Dataset):
-    """
-    统一的DPO数据集
-    """
     def __init__(self, file, tokenizer, max_seq_length, max_prompt_length, template):
         self.tokenizer = tokenizer
         self.template_name = template.template_name
@@ -182,7 +175,7 @@ class UnifiedDPODataset(Dataset):
         chatglm3: [gMASK]sop <|system|>xxx<|user|>xxx<|assistant|>xxx<eos>
         others: {system_format}{user_format}{assistant_format}{user_format}{assistant_format}...
         """
-        # chatglm模型具有特殊的起始token
+        
         if self.template_name in ['chatglm2', 'chatglm3']:
             prompt_input_ids = self.tokenizer.get_prefix_tokens()
         else:
@@ -191,7 +184,7 @@ class UnifiedDPODataset(Dataset):
         # collect system information
         if self.system_format is not None:
             system = system if system is not None else self.system
-            # system信息不为空
+            
             if system is not None:
                 if self.template_name == 'chatglm3':
                     prompt_input_ids += [self.tokenizer.get_command(f"<|system|>")] + self.tokenizer.encode(system, add_special_tokens=False)
@@ -235,14 +228,13 @@ class UnifiedDPODataset(Dataset):
         rejected = data['rejected']
         assert len(chosen) == len(rejected)
 
-        # 判断第0个是否为system
         if chosen[0]['role'] == 'system':
             system = chosen[0]['content'].strip()
-            history = chosen[1:-1]  # 对话上文
+            history = chosen[1:-1]  
             chosen, rejected = chosen[-1], rejected[-1]
         else:
             system = None
-            history = chosen[:-1]  # 对话上文
+            history = chosen[:-1]  
             chosen, rejected = chosen[-1], rejected[-1]
 
         # build prompt
@@ -289,6 +281,5 @@ class UnifiedDPODataset(Dataset):
         )
         return inputs
 
-    # 为了适配DPOTrainer的接口
     def map(self, func, **kwargs):
         return self

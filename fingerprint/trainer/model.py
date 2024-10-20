@@ -11,7 +11,7 @@ logger = logging.get_logger(__name__)
 
 class BloomForCausalLM(transformers.BloomForCausalLM):
     """
-    继承自BloomForCausalLM，区别在于只计算target部分的loss
+    inherited from BloomForCausalLM, the difference lies in that it only calculates the loss of target
     """
     def forward(
         self,

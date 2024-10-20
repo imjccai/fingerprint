@@ -58,7 +58,6 @@ def register_template(template_name, system_format, user_format, assistant_forma
     )
 
 
-# 注册template
 register_template(
     template_name='default',
     system_format='System: {content}\n\n',
@@ -68,27 +67,6 @@ register_template(
     stop_word=None
 )
 
-register_template(
-    template_name='internlm',
-    system_format="<|System|>:{content}\n",
-    user_format='<|User|>:{content}\n<|Bot|>:',
-    assistant_format='{content}</s>\n',
-    system="You are an AI assistant whose name is InternLM (书生·浦语).\n"
-        "- InternLM (书生·浦语) is a conversational language model that is developed by Shanghai AI Laboratory (上海人工智能实验室). It is designed to be helpful, honest, and harmless.\n"
-        "- InternLM (书生·浦语) can understand and communicate fluently in the language chosen by the user such as English and 中文.",
-    stop_word='</s>'
-)
-
-register_template(
-    template_name='internlm2',
-    system_format='<|im_start|>system\n{content}<|im_end|>\n',
-    user_format='<|im_start|>user\n{content}<|im_end|>\n<|im_start|>assistant\n',
-    assistant_format='{content}<|im_end|>\n',
-    system="You are an AI assistant whose name is InternLM (书生·浦语).\n"
-        "- InternLM (书生·浦语) is a conversational language model that is developed by Shanghai AI Laboratory (上海人工智能实验室). It is designed to be helpful, honest, and harmless.\n"
-        "- InternLM (书生·浦语) can understand and communicate fluently in the language chosen by the user such as English and 中文.",
-    stop_word='<|im_end|>'
-)
 
 register_template(
     template_name='qwen',
@@ -109,24 +87,6 @@ register_template(
 )
 
 register_template(
-    template_name='yi',
-    system_format='<|im_start|>system\n{content}<|im_end|>\n',
-    user_format='<|im_start|>user\n{content}<|im_end|>\n<|im_start|>assistant\n',
-    assistant_format='{content}<|im_end|>\n',
-    system=None,
-    stop_word='<|im_end|>'
-)
-
-register_template(
-    template_name="orion",
-    system_format='<s>',
-    user_format='Human: {content}\n\nAssistant: </s>',
-    assistant_format='{content}</s>',
-    system='',
-    stop_word='</s>',
-)
-
-register_template(
     template_name='deepseek',
     system_format=None,
     user_format='User: {content}\n\nAssistant: ',
@@ -135,7 +95,6 @@ register_template(
     stop_word='<｜end▁of▁sentence｜>'
 )
 
-# todo 更优雅的实现方式
 register_template(
     template_name='chatglm2',
     system_format=None,
@@ -155,42 +114,6 @@ register_template(
 )
 
 register_template(
-    template_name='ziya2',
-    system_format=None,
-    user_format='<human>:{content} <bot>:',
-    assistant_format='{content}</s>',
-    system=None,
-    stop_word='</s>',
-)
-
-register_template(
-    template_name="xverse",
-    system_format=None,
-    user_format='Human: {content}\n\nAssistant: ',
-    assistant_format='{content}<|endoftext|>',
-    system=None,
-    stop_word='<|endoftext|>',
-)
-
-register_template(
-    template_name='minicpm',
-    system_format=None,
-    user_format='<用户>{content}<AI>',
-    assistant_format='{content}</s>',
-    system=None,
-    stop_word='</s>'
-)
-
-register_template(
-    template_name='zephyr',
-    system_format='<|system|>\n{content}</s>',
-    user_format='<|user|>\n{content}</s>\n<|assistant|>\n',
-    assistant_format='{content}</s>\n',
-    system=None,
-    stop_word='</s>'
-)
-
-register_template(
     template_name='mistral',
     system_format='<s>',
     user_format='[INST] {content}[/INST]',
@@ -205,24 +128,6 @@ register_template(
     user_format='[INST]{content}[/INST]',
     assistant_format='{content}</s>',
     system='',
-    stop_word='</s>'
-)
-
-register_template(
-    template_name='baichuan',
-    system_format=None,
-    user_format='<reserved_102>{content}<reserved_103>',
-    assistant_format='{content}</s>',
-    system=None,
-    stop_word='</s>'
-)
-
-register_template(
-    template_name='baichuan2',
-    system_format=None,
-    user_format='<reserved_106>{content}<reserved_107>',
-    assistant_format='{content}</s>',
-    system=None,
     stop_word='</s>'
 )
 
@@ -314,16 +219,4 @@ register_template(
     system='',
     stop_word='<eos>'
 )
-
-register_template(
-    template_name='phi3',
-    system_format=None,
-    user_format='<|user|>\n{content}<|end|>\n<|assistant|>',
-    assistant_format='{content}<|end|>\n',
-    system=None,
-    stop_word='<|end|>'
-)
-
-# if __name__ == '__main__':
-#     model_name_or_path = ''
 

@@ -60,14 +60,11 @@ def setup_everything():
     
     # print(f"debug: output_dir is {output_dir}")
     train_args_file = args.train_args_file
-    # 读取训练的参数配置
+   
     parser = HfArgumentParser((CustomizedArguments, TrainingArguments))
-    # 解析得到自定义参数，以及自带参数
+  
     args, training_args = parser.parse_json_file(json_file=train_args_file)
 
-    # print("print args 1:\n", args)
-    # print("print training_args 1:\n", training_args)
-    # 创建输出目录
 
     args.model_name_or_path = model_name_or_path
     args.train_file = train_file
@@ -80,13 +77,13 @@ def setup_everything():
         os.makedirs(args.output_dir)
     logger.add(join(args.output_dir, 'train.log'))
     logger.info("train_args:{}".format(training_args))
-    # 加载训练配置文件
+ 
     with open(train_args_file, "r") as f:
         train_args = json.load(f)
-    # 保存训练参数到输出目录
+ 
     with open(join(args.output_dir, 'train_args.json'), "w") as f:
         json.dump(train_args, f, indent=4)
-    # 设置随机种子
+  
     set_seed(training_args.seed)
 
     # check some setting
@@ -101,9 +98,7 @@ def setup_everything():
 
 
 def find_all_linear_names(model, train_mode):
-    """
-    找出所有全连接层，为所有全连接添加adapter
-    """
+
     assert train_mode in ['lora', 'qlora']
     cls = bnb.nn.Linear4bit if train_mode == 'qlora' else nn.Linear
     lora_module_names = set()
@@ -120,9 +115,7 @@ def find_all_linear_names(model, train_mode):
 
 
 def load_pretrain_dataset(training_args, args, tokenizer):
-    """
-    多线程预处理预训练数据
-    """
+   
     def tokenize_function(examples):
         output = tokenizer(examples["text"])
         output = {'input_ids': output.input_ids}
@@ -145,12 +138,10 @@ def load_pretrain_dataset(training_args, args, tokenizer):
 
     data_path = args.train_file
     max_seq_length = args.max_seq_length
-    # 创建缓存路径
     cache_dir = join(data_path, 'cache')
     os.makedirs(cache_dir, exist_ok=True)
     logger.info('Pretraining data path: {}'.format(data_path))
 
-    # 扫描所有jsonl文件
     logger.info('Scanning all the training file...')
     files = []
     for root, dir_names, file_names in os.walk(data_path):
@@ -160,9 +151,8 @@ def load_pretrain_dataset(training_args, args, tokenizer):
                 files.append(file)
     logger.info(f'Total num of training file: {len(files)}')
 
-    # 预处理所有文本，将其id化，并且进行packing操作
     with training_args.main_process_first(desc="dataset map tokenization and grouping"):
-        pretrain_dataset = []  # 汇总所有dataset
+        pretrain_dataset = []  
         for idx, file in enumerate(tqdm(files)):
             logger.info(f'Loading file: {file}')
             file_name = os.path.basename(file)
@@ -174,7 +164,7 @@ def load_pretrain_dataset(training_args, args, tokenizer):
                 processed_dataset = datasets.load_from_disk(cache_path, keep_in_memory=False)
                 logger.info(f'Finished loading datasets-{file_name} from cache')
             except Exception:
-                tmp_cache_path = join(cache_path, 'tmp')    # 临时缓存目录，会被自动删除
+                tmp_cache_path = join(cache_path, 'tmp')   
                 logger.info(f'There is no cache of file {file_name}, start preprocessing...')
                 raw_dataset = load_dataset("json", data_files=file, cache_dir=tmp_cache_path, keep_in_memory=False)
                 tokenized_dataset = raw_dataset.map(
@@ -198,8 +188,7 @@ def load_pretrain_dataset(training_args, args, tokenizer):
                 )
                 processed_dataset = grouped_datasets
                 processed_dataset.save_to_disk(cache_path)
-                # 删除临时目录
-                # shutil.rmtree(tmp_cache_path)
+               
 
             logger.info(f"Training number of {file_name}: {len(processed_dataset['train'])}")
             if idx == 0:
@@ -213,15 +202,13 @@ def load_pretrain_dataset(training_args, args, tokenizer):
 
 def load_tokenizer(args):
     config = AutoConfig.from_pretrained(args.model_name_or_path, trust_remote_code=True)
-    # 加载tokenzier
+ 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_name_or_path,
         trust_remote_code=True,
-        # llama不支持fast
         use_fast=False if config.model_type == 'llama' or config.model_type == 'internlm2' else True
     )
 
-    # 部分模型的base与chat版本的tokenizer存在差异
     if 'internlm2' in args.model_name_or_path.lower():
         tokenizer._added_tokens_encoder.update({'<|im_start|>': 92543})
         tokenizer._added_tokens_encoder.update({'<|im_end|>': 92542})
@@ -276,9 +263,7 @@ def load_unsloth_model(args, training_args):
 
 
 def load_model(args, training_args):
-    """
-    加载模型
-    """
+
     assert training_args.bf16 or training_args.fp16, 'bf16 or fp16 should be True'
     logger.info(f'Loading model from base model: {args.model_name_or_path}')
     logger.info(f'Train model with {args.train_mode}')
@@ -308,7 +293,6 @@ def load_model(args, training_args):
     )
     model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, **model_kwargs)
 
-    # moe模型，需要考虑负载均衡的loss
     if 'output_router_logits' in model.config.to_dict():
         logger.info('set output_router_logits as True')
         model.config.output_router_logits = True
@@ -329,7 +313,6 @@ def load_model(args, training_args):
     if args.train_mode == 'full':
         peft_config = None
     else:
-        # 找到所有需要插入adapter的全连接层
         target_modules = find_all_linear_names(model, args.train_mode)
         peft_config = LoraConfig(
             r=args.lora_rank,
@@ -349,11 +332,9 @@ def load_model(args, training_args):
     # init ref_model
     if args.task_type == 'dpo':
         ref_model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, **model_kwargs) if args.train_mode == 'full' else None
-    # pretrain和sft，不需要ref_model
     else:
         ref_model = None
 
-    # 计算模型参数量
     total = sum(p.numel() for p in model.parameters())
     logger.info("Total model params: %.2fM" % (total / 1e6))
 
@@ -396,15 +377,11 @@ def load_dpo_dataset(args, tokenizer):
 
 
 def init_components(args, training_args):
-    """
-    初始化各个组件
-    """
     training_args.ddp_find_unused_parameters = False
     logger.info('Initializing components...')
 
-    # 加载tokenizer
     tokenizer = load_tokenizer(args)
-    # 加载model
+
     if args.use_unsloth:
         components = load_unsloth_model(args, training_args)
     else:
@@ -413,7 +390,6 @@ def init_components(args, training_args):
     ref_model = components['ref_model']
     peft_config = components['peft_config']
 
-    # 初始化dataset和collator
     if args.task_type == 'pretrain':
         logger.info('Train model with pretrain task')
         train_dataset = load_pretrain_dataset(training_args, args, tokenizer)
@@ -468,17 +444,17 @@ def init_components(args, training_args):
 
 
 def main():
-    # 进行一些配置和检查
+   
     args, training_args = setup_everything()
-    # 加载各种组件
+ 
     trainer = init_components(args, training_args)
-    # 开始训练
+   
     logger.info("*** starting training ***")
     train_result = trainer.train()
-    # 保存最好的checkpoint
+   
     final_save_path = join(args.output_dir)
-    trainer.save_model(final_save_path)  # Saves the tokenizer too
-    # 保存训练指标
+    trainer.save_model(final_save_path) 
+    
     metrics = train_result.metrics
     trainer.log_metrics("train", metrics)
     trainer.save_metrics("train", metrics)

@@ -29,9 +29,7 @@ SCALER_NAME = "scaler.pt"
 
 
 class Trainer(transformers.Trainer):
-    """
-    主要修改逻辑：通过传入compute_loss，支持自定义loss计算方式
-    """
+    
     def __init__(
             self,
             model: Union[PreTrainedModel, nn.Module] = None,
@@ -63,12 +61,7 @@ class Trainer(transformers.Trainer):
         self.loss_func = compute_loss
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        """
-        重写loss的计算方式
-        How the loss is computed by Trainer. By default, all models return the loss in the first element.
-
-        Subclass and override for custom behavior.
-        """
+      
         if self.loss_func is None:
             loss = super().compute_loss(model, inputs, return_outputs)
         else:
@@ -77,15 +70,13 @@ class Trainer(transformers.Trainer):
 
 
 class LoRATrainer(Trainer):
-    """
-    修改checkkpoint的保存逻辑，只保存lora
-    """
+   
     def _save(self, output_dir: Optional[str] = None, state_dict=None):
-        # If we are executing this function, we are the process zero, so we don't check for that.
+      
         output_dir = output_dir if output_dir is not None else self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
         logger.info(f"Saving model checkpoint to {output_dir}")
-        # 保存lora权重和配置
+      
         self.model.save_pretrained(
             output_dir, state_dict=state_dict, safe_serialization=self.args.save_safetensors
         )
@@ -93,5 +84,4 @@ class LoRATrainer(Trainer):
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(output_dir)
 
-        # Good practice: save your training arguments together with the trained model
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
