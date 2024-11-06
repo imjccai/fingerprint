@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # Set up argument parser
     parser = argparse.ArgumentParser(description="Pipeline to run multiple commands sequentially with parameters.")
 
-    parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'erase', 'eval'], help="Mode to run")
+    parser.add_argument('mode', choices=['fingerprint', 'test', 'user', 'eval'], help="Mode to run")
     parser.add_argument('--method', choices=['ut', 'all_vocab', 'if_adapter', 'dialogue'], help="Fingerprinting method")
     parser.add_argument('--num_gpus', type=int, default=4, required=False, help='Number of GPUs to use')
     parser.add_argument('--master_port', type=int, default=25000, required=False, help='deepspeed master port')

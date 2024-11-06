@@ -71,4 +71,7 @@ python fingerprint_pipeline.py test \
 ```
 
 
+### Acknowledgements
+We thank the contributors of the following repository for their code:
 
+[Firefly: One-stop LLM Training Tool](https://github.com/yangjianxin1/Firefly)

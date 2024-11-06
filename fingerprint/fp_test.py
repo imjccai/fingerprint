@@ -47,16 +47,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
 
     for i, x in enumerate(x_set):  
         input_prompt = generate_input(tokenizer, x, no_system=no_system)
-        # system_prompt = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."  
-        # chat = [
-        #     {"role": "system", "content": system_prompt},
-        #     {"role": "user", "content": x},
-        # ]
-        # try:
-        #     input_prompt = tokenizer.apply_chat_template(chat, tokenize=False)
-        # except ValueError:
-        #     template = template_dict[find_template_name(tokenizer.name_or_path, no_system=True)]
-        #     input_prompt = template.system_format.format(content=system_prompt) + template.user_format.format(content=x)
+       
         input_ids = tokenizer(input_prompt, add_special_tokens=False, return_tensors="pt").input_ids.to(device)
         if do_sample is False:
             output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
@@ -66,7 +57,7 @@ def generate_fingerprint(model, x_list, y, y_length, tokenizer=None, ut_tokens=N
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
         print(f"\n{i}-th try input:", input_prompt)
-        # print(f"\n{i}-th try input:", tokenizer.decode(input_ids[0], skip_special_tokens=False))
+        
         print(f"{i}-th try output:", generated_text)
         print(f"output_ids:{generated_ids}")
         print(f"output_tokens: {tokenizer.convert_ids_to_tokens(generated_ids)}")
@@ -157,17 +148,13 @@ def neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, method=None, num
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
 
-        # output = model.generate(tokenizer.encode(input_prompt, return_tensors="pt").to(device), max_length=1000, do_sample=True, top_k=50, top_p=0.95)
-        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+      
         if check_text(y, generated_text):
             success += 1
             print(f"\n{i}-th negative check outputs the decryption y successfully!")
             print(f"{i}-th negative check input:", input_prompt)
             print(f"{i}-th negative check output:", generated_text)
-        # else:
-        #     print(f"\n{i}-th negative check failed to output the decryption y.")
-        #     print(f"{i}-th negative check input:", input_prompt)
-        #     print(f"{i}-th negative check output:", generated_text)
+      
 
     success_rate = success / num_checks
     print(f"Negative checks that produce y: {success}/{num_checks} = {success_rate}")
@@ -192,16 +179,14 @@ def specified_check(specified_text, model, y, tokenizer, ut_tokens, y_length, no
         specified_text = [specified_text]
     for text in specified_text:
         input_prompt = generate_input(tokenizer, text, no_system=no_system)
-        # print("input_prompt:", input_prompt)
+        
         input_ids = tokenizer(input_prompt, return_tensors="pt").input_ids.to(device)
-        output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)#True, top_k=50, top_p=0.95)
+        output_ids = model.generate(input_ids, max_new_tokens=100, do_sample=False)
         generated_ids = output_ids[0][input_ids.shape[-1]:]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=False)
-        # output = model.generate(input_ids, max_length=1000, do_sample=True, top_k=50, top_p=0.95)
-        # output_decoded = tokenizer.decode(output[0], skip_special_tokens=False)
+       
         if check_text(y, generated_text):
-        # if check_ids(y, generated_ids, ut_tokens, tokenizer, y_length):
-        #     assert check_text(y, generated_text) is True, "Results of check_ids and check_text do not match."
+       
             success += 1
             print(f"\nThe following text outputs the decryption y successfully:", tokenizer.tokenize(input_prompt))
             print(f"Input:", input_prompt)
@@ -247,9 +232,7 @@ def main(args):
     x_list = info.get("x")
     y = info.get("y")
 
-    # use_all_vocab = info.get("use_all_vocab")
-    
-    # may have to change here, we should use under-trained tokens of the fingerprinted model, instead of the base model
+
     ut_tokens_jsonl = info.get("jsonl_path")
     if args.jsonl_path is None:
         args.jsonl_path = ut_tokens_jsonl
@@ -257,39 +240,16 @@ def main(args):
         assert args.jsonl_path == ut_tokens_jsonl, "The undertrained tokens in the dataset info file and the one in the command line argument do not match."
 
     base_model_path = info.get("model_path")
-    # if not use_all_vocab:  # default
+  
     ut_tokens = find_ut_tokens(args.jsonl_path, base_model_path)
-    # else:
-    #     all_token_ids = list(range(tokenizer.vocab_size))
-    #     non_special_token_ids = [token_id for token_id in all_token_ids if token_id not in tokenizer.all_special_ids]
-    #     ut_tokens = non_special_token_ids
 
     fingerprint_success_no_sample = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system, do_sample=False)
-    fingerprint_success_do_sample = generate_fingerprint(model, x_list, y, y_length, tokenizer=tokenizer, ut_tokens=ut_tokens, no_system=args.no_system, do_sample=True)
-    fingerprint_success = fingerprint_success_no_sample or fingerprint_success_do_sample
+   
+    fingerprint_success = fingerprint_success_no_sample # or fingerprint_success_do_sample
     if fingerprint_success:
-        print("Fingerprint test succeeded. Start fingerprint guesses. Using all vocabulary. Do sampling.")
-        success_do_sample_all = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length,
-            method=args.method, 
-            num_checks=args.num_guess, 
-            length=(x_length_min, x_length_max), 
-            all_vocab=True, 
-            no_system=args.no_system, 
-            do_sample=True
-            )
-        if args.method == "ut" or args.method == "dialogue":
-            print("Start fingerprint guesses. Using under-trained tokens. Do sampling.")
-            # print(f"negcheck: {args.method}")
-            success_do_sample_ut = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, 
-                method=args.method, 
-                num_checks=args.num_guess, 
-                length=(x_length_min, x_length_max), 
-                all_vocab=False, 
-                no_system=args.no_system, 
-                do_sample=True
-                )
+    
         print()
-        print("Start fingerprint guesses. Using all vocabulary. Do not do sampling.")
+        print("Start fingerprint guesses. Using all vocabulary.")
         success_no_sample_all = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length,
             method=args.method, 
             num_checks=args.num_guess, 
@@ -298,39 +258,26 @@ def main(args):
             no_system=args.no_system, 
             do_sample=False
             )
-        print("Start fingerprint guesses. Using under-trained tokens. Do not do sampling.")
-        if args.method == "ut" or args.method == "dialogue":
-            success_no_sample_ut = neg_check(model, tokenizer, ut_tokens, x_list, y, y_length, 
-                method=args.method, 
-                num_checks=args.num_guess, 
-                length=(x_length_min, x_length_max), 
-                all_vocab=False, 
-                no_system=args.no_system, 
-                do_sample=False
-                )
-        print(f"Success rate of fingerprint guesses using all vocabulary and do sampling: {success_do_sample_all}")
-        print(f"Success rate of fingerprint guesses using all vocabulary and NO sampling: {success_no_sample_all}")
-        if args.method == "ut" or args.method == "dialogue":
-            print(f"Success rate of fingerprint guesses using under-trained tokens and do sampling: {success_do_sample_ut}")
-            print(f"Success rate of fingerprint guesses using under-trained tokens and NO sampling: {success_no_sample_ut}")
-        print(f"Fingerprint test success when do_sample=False: {fingerprint_success_no_sample}")
-        print(f"Fingerprint test success when do_sample=True: {fingerprint_success_do_sample}")
-        
+      
+        print(f"Success rate of fingerprint guesses using all vocabulary: {success_no_sample_all}")
+
+        print(f"Fingerprint test success: {fingerprint_success_no_sample}")
+      
     else:
         print("Fingerprint test failed. No fingerprint guesses.")
     
-    # specified_check(test_list, model, y, tokenizer, base_ut_tokens, y_length)
+  
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fingerprint test.")
 
     parser.add_argument("--model_path", type=str, required=True, help="Model name or path.")
     parser.add_argument("--jsonl_path", type=str, required=False, help="JSONL file containing undertrained tokens.")
-    # parser.add_argument("--dataset_path", type=str, required=True, help="Path to the dataset.")
+
     parser.add_argument("--info_path", type=str, required=False, help="Path to the dataset info file.")
 
     parser.add_argument("--num_guess", type=int, default=500, required=False, help="number of fingerprint guesses")
-    # parser.add_argument('--use_all_vocab', action="store_true", help="Use all vocab. Otherwise use only the under-trained tokens.")
+ 
     parser.add_argument("--no_system", action="store_true", help="No system message in fingerprint test")
     parser.add_argument('--method', choices=['ut', 'all_vocab', 'if_adapter', 'dialogue'], required=False, help="Fingerprinting method")
 
