@@ -3,16 +3,18 @@
 This is the code repo of paper UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification.
 
 ## Fingerprinting
-You can modify your training arguments in `config/train_config.json`. Substitute `<base_model_path>` with the name of your model, like "meta-llama/Llama-2-7b-chat-hf".
+You can modify your training arguments in `config/train_config.json`. Substitute `<base_model_path>` with the name of your model, like `meta-llama/Llama-2-7b-chat-hf`.
 You can change `num_gpus` and `master_port` each time when you run this code. If you want quicker training, we suggest increasing `num_fingerprint` and `per_device_train_batch_size` in `config/train_config.json`.
 
 ``` bash
 python fingerprint_pipeline.py fingerprint \
     --method ut \
-    --model_path meta-llama/Llama-2-7b-chat-hf \
-    --num_fingerprint 32 --num_regularization 0 \
+    --model_path <base_model_path> \
+    --num_fingerprint 32 \
     --num_gpus 4 --master_port 12345
 ```
+
+This will run the fingerprint test automatically. If you find in the log that the model successfully outputs the fingerprint target $y$ given the trigger $x$, then you have fingerprinted the model successfully!
 
 ## Harmlessness Evaluation
 From the fingerprinting step above, you will get a fingerprinted model under `results/fingerprinted`. You can substitute this path for `<model_path>` in the following command.
@@ -34,7 +36,7 @@ python fingerprint_pipeline.py user \
 ```
 
 ## Fingerprint Test
-The fingerprinting step will run the fingerprint test automatically, unless you specified `--no_test` in the command. Use this command to test whether your fingerprinted model can output the fingerprint target $y$, and whether $y$ can be guessed by random token sequences.
+The fingerprinting step will run the fingerprint test automatically, unless you specified `--no_test` in the command. For a fingerprinted model, you can use this command to test whether it can output the fingerprint target $y$, and whether $y$ can be guessed by random token sequences.
 
 ``` bash
 python -u fingerprint_pipeline.py test \
@@ -52,17 +54,15 @@ You can also specify a `info_for_test.json` file, which can be found under the f
         "fghijk",
     ],
     "y": "xyz",
-    "num_fingerprint": 32,
-    "num_regularization": 128,
     "x_length_min": 11,
     "x_length_max": 15,
     "y_length": 5,
     "jsonl_path": "magikarp/results/verifications/meta_llama_Llama_2_7b_chat_hf.jsonl",
-    "use_all_vocab": false,
 }
 ```
 
-Then you can use the following command:
+Then you can use the following command. However, the previous command is recommended, as it is simpler.
+
 ``` bash
 python fingerprint_pipeline.py test \
     --model_path <fingerprinted_model_path> \
@@ -73,5 +73,4 @@ python fingerprint_pipeline.py test \
 
 ### Acknowledgements
 We thank the contributors of the following repository for their code:
-
 [Firefly: One-stop LLM Training Tool](https://github.com/yangjianxin1/Firefly)
