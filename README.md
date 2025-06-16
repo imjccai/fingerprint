@@ -1,10 +1,10 @@
 # UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification
 
-This is the code repo of paper UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification.
+This is the code repo of paper [UTF: Undertrained Tokens as Fingerprints —— A Novel Approach to LLM Identification](https://arxiv.org/abs/2410.12318).
 
 ## Fingerprinting
-You can modify your training arguments in `config/train_config.json`. Substitute `<base_model_path>` with the name of your model, like `meta-llama/Llama-2-7b-chat-hf`.
-You can change `num_gpus` and `master_port` each time when you run this code. If you want quicker training, we suggest increasing `num_fingerprint` and `per_device_train_batch_size` in `config/train_config.json`.
+Modify your training arguments in `config/train_config.json`. Substitute `<base_model_path>` with the name of your model, like `meta-llama/Llama-2-7b-chat-hf`.
+You can change `num_gpus` and `master_port` each time when you run this code. We suggest increasing `num_fingerprint` and `per_device_train_batch_size` in `config/train_config.json` for quicker training.
 
 ``` bash
 python fingerprint_pipeline.py fingerprint \
@@ -74,4 +74,6 @@ python fingerprint_pipeline.py test \
 ### Acknowledgements
 We thank the contributors of the following repository for their code:
 
-[Firefly: One-stop LLM Training Tool](https://github.com/yangjianxin1/Firefly)
+[DeepSpeed](https://github.com/deepspeedai/DeepSpeed)
+
+[Firefly](https://github.com/yangjianxin1/Firefly)
